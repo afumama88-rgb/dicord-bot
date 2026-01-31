@@ -1,0 +1,8 @@
+{
+  "build": {
+    "type": "nodejs"
+  },
+  "start": {
+    "command": "node src/index.js"
+  }
+}

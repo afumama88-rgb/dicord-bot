@@ -1,0 +1,39 @@
+{
+  "name": "discord-bot",
+  "version": "1.0.0",
+  "description": "Discord 自動化資訊收集與行事曆助手",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js",
+    "setup-google": "node scripts/setup-google-auth.js"
+  },
+  "dependencies": {
+    "discord.js": "^14.25.1",
+    "@google/genai": "^1.37.0",
+    "@notionhq/client": "^5.7.0",
+    "googleapis": "^144.0.0",
+    "apify-client": "^2.11.0",
+    "cheerio": "^1.0.0",
+    "@mozilla/readability": "^0.5.0",
+    "jsdom": "^26.0.0",
+    "pdf-parse": "^1.1.1",
+    "node-cache": "^5.1.2",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.0",
+    "open": "^10.1.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "discord",
+    "bot",
+    "notion",
+    "google-calendar",
+    "automation"
+  ],
+  "author": "",
+  "license": "MIT"
+}

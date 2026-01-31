@@ -1,0 +1,336 @@
+/**
+ * Notion API 服務
+ * 使用 @notionhq/client v5.7.0（對應 API v2025-09-03）
+ */
+
+import { Client } from '@notionhq/client';
+import { config } from '../config/index.js';
+
+// 初始化 Notion 客戶端
+const notion = new Client({
+  auth: config.notion.apiKey
+});
+
+const INFO_DATABASE_ID = config.notion.databaseIds.info;
+const CALENDAR_DATABASE_ID = config.notion.databaseIds.calendar;
+
+/**
+ * 格式化 Notion 頁面 URL（確保桌面版瀏覽器能正確開啟）
+ * @param {string} pageId - 頁面 ID
+ * @returns {string} 格式化後的 URL
+ */
+function formatNotionUrl(pageId) {
+  // 移除連字號，使用純 ID 格式
+  const cleanId = pageId.replace(/-/g, '');
+  return `https://www.notion.so/${cleanId}`;
+}
+
+/**
+ * 取得建立時間戳記
+ * @returns {string} 格式化的時間戳 [YYYY-MM-DD HH:mm]
+ */
+function getCreatedTimestamp() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  const hours = String(now.getHours()).padStart(2, '0');
+  const minutes = String(now.getMinutes()).padStart(2, '0');
+  return `[${year}-${month}-${day} ${hours}:${minutes}]`;
+}
+
+/**
+ * 建立資訊收集頁面（#資訊收集 頻道用）
+ * @param {Object} data - 頁面資料
+ * @returns {Promise<{id: string, url: string}>}
+ */
+export async function createInfoPage(data) {
+  const properties = {
+    title: {
+      title: [{ text: { content: data.title || '無標題' } }]
+    },
+    date: {
+      date: { start: new Date().toISOString().split('T')[0] }
+    },
+    type: {
+      select: { name: data.type || '網路文章' }
+    },
+    url: {
+      url: data.url || null
+    }
+  };
+
+  // 摘要（如果有）
+  if (data.description) {
+    properties['摘要'] = {
+      rich_text: [{ text: { content: data.description.slice(0, 2000) } }]
+    };
+  }
+
+  // 作者（如果有）
+  if (data.author) {
+    properties.Author = {
+      multi_select: [{ name: data.author }]
+    };
+  }
+
+  const response = await notion.pages.create({
+    parent: { database_id: INFO_DATABASE_ID },
+    properties: properties,
+    children: buildInfoPageContent(data)
+  });
+
+  return {
+    id: response.id,
+    url: formatNotionUrl(response.id)
+  };
+}
+
+/**
+ * 建立行事曆/任務頁面（#行事曆助手 頻道用）
+ * @param {Object} data - 頁面資料
+ * @returns {Promise<{id: string, url: string}>}
+ */
+export async function createTaskPage(data) {
+  if (!CALENDAR_DATABASE_ID) {
+    throw new Error('NOTION_DATABASE_ID_CALENDAR 未設定');
+  }
+
+  const properties = {
+    Name: {
+      title: [{ text: { content: data.title } }]
+    },
+    '日期': {
+      date: {
+        start: data.startDate,
+        end: data.endDate || undefined
+      }
+    },
+    '類型': {
+      select: { name: data.type === 'event' ? '活動' : '任務' }
+    },
+    '優先級': {
+      select: { name: data.priority || '中' }
+    },
+    '狀態': {
+      select: { name: '待處理' }
+    }
+  };
+
+  const response = await notion.pages.create({
+    parent: { database_id: CALENDAR_DATABASE_ID },
+    properties: properties,
+    children: buildTaskPageContent(data)
+  });
+
+  return {
+    id: response.id,
+    url: formatNotionUrl(response.id)
+  };
+}
+
+/**
+ * 更新頁面屬性
+ * @param {string} pageId - 頁面 ID
+ * @param {Object} properties - 要更新的屬性
+ */
+export async function updatePage(pageId, properties) {
+  return await notion.pages.update({
+    page_id: pageId,
+    properties: properties
+  });
+}
+
+/**
+ * 封存頁面（軟刪除）
+ * @param {string} pageId - 頁面 ID
+ */
+export async function archivePage(pageId) {
+  return await notion.pages.update({
+    page_id: pageId,
+    archived: true
+  });
+}
+
+/**
+ * 建立資訊頁面內容區塊
+ */
+function buildInfoPageContent(data) {
+  const blocks = [];
+
+  // 摘要（如果有）
+  if (data.description) {
+    blocks.push({
+      object: 'block',
+      type: 'paragraph',
+      paragraph: {
+        rich_text: [{
+          type: 'text',
+          text: { content: data.description.slice(0, 2000) }
+        }]
+      }
+    });
+  }
+
+  // YouTube 嵌入（如果是 YT 類型）
+  if (data.type === 'YT' && data.url) {
+    blocks.push({
+      object: 'block',
+      type: 'video',
+      video: {
+        type: 'external',
+        external: { url: data.url }
+      }
+    });
+  }
+
+  // 分隔線
+  blocks.push({
+    object: 'block',
+    type: 'divider',
+    divider: {}
+  });
+
+  // 來源標記
+  blocks.push({
+    object: 'block',
+    type: 'paragraph',
+    paragraph: {
+      rich_text: [{
+        type: 'text',
+        text: { content: `由 Cyclone Discord Bot 建立 ${getCreatedTimestamp()}` },
+        annotations: { italic: true, color: 'gray' }
+      }]
+    }
+  });
+
+  return blocks;
+}
+
+/**
+ * 建立任務頁面內容區塊
+ */
+function buildTaskPageContent(data) {
+  const blocks = [];
+
+  // 摘要 Callout
+  if (data.summary) {
+    blocks.push({
+      object: 'block',
+      type: 'callout',
+      callout: {
+        rich_text: [{ type: 'text', text: { content: data.summary } }],
+        icon: { type: 'emoji', emoji: '📋' }
+      }
+    });
+  }
+
+  // 時間資訊
+  if (data.startTime) {
+    blocks.push({
+      object: 'block',
+      type: 'paragraph',
+      paragraph: {
+        rich_text: [
+          { type: 'text', text: { content: '🕐 時間：' }, annotations: { bold: true } },
+          {
+            type: 'text',
+            text: {
+              content: data.endTime
+                ? `${data.startTime} - ${data.endTime}`
+                : data.startTime
+            }
+          }
+        ]
+      }
+    });
+  }
+
+  // 地點（如果有）
+  if (data.location) {
+    blocks.push({
+      object: 'block',
+      type: 'paragraph',
+      paragraph: {
+        rich_text: [
+          { type: 'text', text: { content: '📍 地點：' }, annotations: { bold: true } },
+          { type: 'text', text: { content: data.location } }
+        ]
+      }
+    });
+  }
+
+  // 截止日期（如果有）
+  if (data.deadline) {
+    blocks.push({
+      object: 'block',
+      type: 'paragraph',
+      paragraph: {
+        rich_text: [
+          { type: 'text', text: { content: '⏰ 截止日期：' }, annotations: { bold: true } },
+          {
+            type: 'text',
+            text: {
+              content: data.deadlineDescription
+                ? `${data.deadline} (${data.deadlineDescription})`
+                : data.deadline
+            }
+          }
+        ]
+      }
+    });
+  }
+
+  // 聯絡資訊（如果有）
+  if (data.contact && (data.contact.name || data.contact.phone || data.contact.email)) {
+    blocks.push({
+      object: 'block',
+      type: 'heading_3',
+      heading_3: {
+        rich_text: [{ type: 'text', text: { content: '聯絡資訊' } }]
+      }
+    });
+
+    const contactLines = [];
+    if (data.contact.name) contactLines.push(`承辦人：${data.contact.name}`);
+    if (data.contact.phone) contactLines.push(`電話：${data.contact.phone}`);
+    if (data.contact.email) contactLines.push(`信箱：${data.contact.email}`);
+
+    blocks.push({
+      object: 'block',
+      type: 'paragraph',
+      paragraph: {
+        rich_text: [{ type: 'text', text: { content: contactLines.join('\n') } }]
+      }
+    });
+  }
+
+  // 分隔線
+  blocks.push({
+    object: 'block',
+    type: 'divider',
+    divider: {}
+  });
+
+  // 來源標記
+  blocks.push({
+    object: 'block',
+    type: 'paragraph',
+    paragraph: {
+      rich_text: [{
+        type: 'text',
+        text: { content: `由 Cyclone Discord Bot 建立 ${getCreatedTimestamp()}` },
+        annotations: { italic: true, color: 'gray' }
+      }]
+    }
+  });
+
+  return blocks;
+}
+
+export default {
+  createInfoPage,
+  createTaskPage,
+  updatePage,
+  archivePage
+};
