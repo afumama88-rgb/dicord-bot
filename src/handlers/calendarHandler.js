@@ -99,8 +99,8 @@ function detectContentType(message) {
     }
   }
 
-  // 純文字訊息（需要有足夠長度）
-  if (message.content && message.content.length >= 10) {
+  // 純文字訊息（至少 5 個字）
+  if (message.content && message.content.length >= 5) {
     return 'text';
   }
 
