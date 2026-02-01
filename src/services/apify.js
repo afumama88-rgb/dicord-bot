@@ -78,13 +78,21 @@ export async function scrapeSocialMedia(url, platform) {
  * 標準化貼文資料（不同平台返回的欄位名稱不同）
  */
 function normalizePostData(post, url, platform) {
+  // 記錄原始資料以便除錯
+  console.log(`[Apify] ${platform} 原始資料:`, JSON.stringify(post, null, 2));
+
   // 根據不同平台提取欄位
-  const text = post.text || post.caption || post.content || '';
-  const author = post.authorName || post.ownerUsername || post.username || post.author || '未知';
-  const thumbnail = post.imageUrl || post.thumbnailUrl || post.displayUrl || post.image || null;
-  const likes = post.likesCount || post.likeCount || post.likes || 0;
+  const text = post.text || post.caption || post.content || post.message || '';
+
+  // 作者欄位 - Facebook 可能用 pageName, user, name 等
+  const author = post.pageName || post.userName || post.user?.name || post.name ||
+                 post.authorName || post.ownerUsername || post.username || post.author || '未知';
+
+  const thumbnail = post.imageUrl || post.thumbnailUrl || post.displayUrl ||
+                    post.image || post.media?.[0]?.url || post.photoUrl || null;
+  const likes = post.likesCount || post.likeCount || post.likes || post.reactions || 0;
   const comments = post.commentsCount || post.commentCount || post.comments || 0;
-  const timestamp = post.timestamp || post.takenAt || post.createdAt || null;
+  const timestamp = post.timestamp || post.takenAt || post.createdAt || post.time || null;
 
   // 平台類型映射
   const typeMap = {
