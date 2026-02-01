@@ -22,7 +22,7 @@ const URL_PATTERNS = {
     /(?:https?:\/\/)?(?:www\.)?instagram\.com\/tv\/([a-zA-Z0-9_-]+)/
   ],
   threads: [
-    /(?:https?:\/\/)?(?:www\.)?threads\.net\/@?[\w.]+\/post\/([a-zA-Z0-9_-]+)/
+    /(?:https?:\/\/)?(?:www\.)?threads\.(?:net|com)\/@?[\w.]+\/post\/([a-zA-Z0-9_-]+)/
   ]
 };
 
