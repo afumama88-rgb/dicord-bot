@@ -287,6 +287,79 @@ return result;
 
 ---
 
+## 2026-02-01：社群媒體爬取全面修復
+
+### Facebook `/share/` 連結格式問題
+
+**問題**：Facebook share 連結無法識別
+```
+https://www.facebook.com/share/1GLJTsepmb/?mibextid=wwXIfr
+```
+
+**原因**：URL 解析器只認得 `/posts/`、`/videos/`、`/watch/` 等格式，沒有 `/share/`
+
+**修正**：在 `urlParser.js` 新增 `/share/` 和 `m.facebook.com/story.php` 格式
+
+### 作者欄位無法提取
+
+**問題**：Discord Bot 無法抓到 Facebook 作者，顯示「未知」，但 Line Bot 可以抓到
+
+**診斷**：對照 Line Bot 程式碼，發現欄位名稱不同
+
+**修正**：對照 Line Bot 的欄位提取邏輯
+
+| 平台 | 作者欄位優先級 |
+|------|--------------|
+| Facebook | `pageName` → `userName` → `name` → `user` → `groupTitle` |
+| Instagram | `ownerUsername` → `username` → `owner.username` → URL 提取 |
+| Threads | URL 提取優先 → `ownerUsername` → `username` → `author` |
+
+### URL 重複處理問題
+
+**問題**：同一個連結被處理兩次，產生兩個回覆
+
+**修正**：在 `extractUrls` 加入 `Set` 去重複
+
+### Apify Fallback 機制
+
+**問題**：Apify 失敗時沒有備用方案
+
+**修正**：新增 `scrapeMetaFallback` 函數
+- 當 Apify 失敗時，嘗試從 HTML meta 標籤提取（og:title, og:description）
+- Threads/IG 可從 URL 提取作者 (@username)
+
+### Actor 更新
+
+對照 Line Bot 使用的 Actor：
+- Instagram: `apify/instagram-scraper`（原本用 `instagram-api-scraper`）
+- Threads: `sinam7/threads-post-scraper`（原本用 `apify/threads-scraper`）
+
+### 空內容偵測
+
+**問題**：爬到空內容時嘗試存入 Notion，造成 `Received one or more errors`
+
+**修正**：偵測空內容並顯示友善錯誤訊息
+```
+無法擷取此 Facebook 內容（可能需要登入）
+```
+
+### 日期欄位包含時間
+
+**需求**：Notion 的 date 欄位要顯示幾點幾分
+
+**修正**：從 `toISOString().split('T')[0]` 改為完整的 `toISOString()`
+
+### Notion 資料驗證
+
+**問題**：作者名稱含特殊字元導致 Notion API 錯誤
+
+**修正**：
+- 新增 `sanitizeAuthor` 函數清理特殊字元
+- 移除逗號（multi_select 分隔符）
+- 限制長度 100 字元
+
+---
+
 ## 待辦事項
 
 - [ ] 手動觸發報告測試指令
@@ -294,6 +367,9 @@ return result;
 - [ ] 圖片分析功能
 - [ ] 提醒機器人功能
 - [x] 修復 Facebook 爬取錯誤訊息
+- [x] 修復社群媒體作者欄位提取
+- [x] 新增 Fallback 機制
+- [x] 日期欄位包含時間
 
 ---
 
@@ -305,3 +381,5 @@ return result;
 4. **Google OAuth 很容易出錯**：Token 格式、憑證配對都要仔細
 5. **錯誤訊息要仔細看**：大部分問題答案都在錯誤訊息裡
 6. **避免靜默降級**：錯誤處理不應該隱藏真正的問題，應該明確告知使用者
+7. **參考現有專案**：同樣功能的專案（如 Line Bot）可以直接對照欄位名稱和處理邏輯
+8. **第三方 API 欄位名稱不統一**：Apify 不同 Actor 回傳的欄位名稱可能不同，需要逐一測試
