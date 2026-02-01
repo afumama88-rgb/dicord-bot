@@ -140,6 +140,13 @@ function buildReportEmbed(type, dateStr, weekday, events, tasks, infoStats) {
 
     eventText = lines.join('\n');
   }
+
+  // 加入 Notion 連結
+  if (config.notion.databaseIds.calendar) {
+    const calendarDbId = config.notion.databaseIds.calendar.replace(/-/g, '');
+    eventText += `\n\n[📂 開啟 Notion 行事曆](https://www.notion.so/${calendarDbId})`;
+  }
+
   embed.addFields({ name: `📌 行程（${events.length} 項）`, value: eventText });
 
   // 任務區塊（含逾期）
@@ -190,6 +197,13 @@ function buildReportEmbed(type, dateStr, weekday, events, tasks, infoStats) {
 
     taskText = lines.join('\n');
   }
+
+  // 加入 Notion 連結
+  if (config.notion.databaseIds.calendar) {
+    const calendarDbId = config.notion.databaseIds.calendar.replace(/-/g, '');
+    taskText += `\n\n[📂 開啟 Notion 任務](https://www.notion.so/${calendarDbId})`;
+  }
+
   embed.addFields({ name: `✅ 任務（${tasks.length} 項）`, value: taskText });
 
   // 資訊收集統計區塊
