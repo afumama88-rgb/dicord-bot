@@ -13,6 +13,12 @@ const notion = new Client({
 const CALENDAR_DATABASE_ID = config.notion.databaseIds.calendar;
 const INFO_DATABASE_ID = config.notion.databaseIds.info;
 
+// 除錯：啟動時記錄資料庫 ID 設定狀態
+console.log('[NotionQuery] 資料庫設定:', {
+  hasCalendarDb: !!CALENDAR_DATABASE_ID,
+  hasInfoDb: !!INFO_DATABASE_ID
+});
+
 /**
  * 查詢未來 7 天內 + 逾期未完成的活動
  * @param {string} todayStr - 今天日期 YYYY-MM-DD（用於判斷逾期）
@@ -20,6 +26,7 @@ const INFO_DATABASE_ID = config.notion.databaseIds.info;
  */
 export async function queryCalendarEvents(todayStr) {
   if (!CALENDAR_DATABASE_ID) {
+    console.log('[NotionQuery] queryCalendarEvents: CALENDAR_DATABASE_ID 未設定，跳過');
     return [];
   }
 
@@ -85,7 +92,7 @@ export async function queryCalendarEvents(todayStr) {
     });
 
   } catch (error) {
-    console.error('查詢行事曆事件失敗:', error.message);
+    console.error('查詢行事曆事件失敗:', error.message, error.code);
     return [];
   }
 }
@@ -97,6 +104,7 @@ export async function queryCalendarEvents(todayStr) {
  */
 export async function queryTasks(todayStr) {
   if (!CALENDAR_DATABASE_ID) {
+    console.log('[NotionQuery] queryTasks: CALENDAR_DATABASE_ID 未設定，跳過');
     return [];
   }
 
@@ -158,15 +166,19 @@ export async function queryTasks(todayStr) {
  */
 export async function queryInfoStats() {
   if (!INFO_DATABASE_ID) {
+    console.log('[NotionQuery] queryInfoStats: INFO_DATABASE_ID 未設定，跳過');
     return { today: 0, week: 0, byType: {} };
   }
 
-  const today = new Date();
-  const todayStr = formatDate(today);
+  const todayStr = getTaipeiToday();
 
-  const weekAgo = new Date();
+  // 計算一週前（基於台北時間的今天）
+  const today = new Date(todayStr + 'T00:00:00+08:00');
+  const weekAgo = new Date(today);
   weekAgo.setDate(weekAgo.getDate() - 7);
   const weekAgoStr = formatDate(weekAgo);
+
+  console.log('[NotionQuery] queryInfoStats:', { todayStr, weekAgoStr });
 
   try {
     // 查詢本週所有資料
@@ -210,7 +222,26 @@ export async function queryInfoStats() {
 }
 
 /**
- * 格式化日期
+ * 取得台北時區的今天日期
+ * @returns {string} YYYY-MM-DD
+ */
+function getTaipeiToday() {
+  const options = {
+    timeZone: 'Asia/Taipei',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  };
+  const formatter = new Intl.DateTimeFormat('zh-TW', options);
+  const parts = formatter.formatToParts(new Date());
+  const year = parts.find(p => p.type === 'year').value;
+  const month = parts.find(p => p.type === 'month').value;
+  const day = parts.find(p => p.type === 'day').value;
+  return `${year}-${month}-${day}`;
+}
+
+/**
+ * 格式化日期（用於計算相對日期）
  */
 function formatDate(date) {
   const year = date.getFullYear();

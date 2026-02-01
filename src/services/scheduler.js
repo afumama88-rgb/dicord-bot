@@ -65,6 +65,14 @@ async function sendDailyReport(type) {
       queryInfoStats()
     ]);
 
+    logger.info('每日報告查詢結果', {
+      date: todayStr,
+      eventsCount: events.length,
+      tasksCount: tasks.length,
+      infoToday: infoStats.today,
+      infoWeek: infoStats.week
+    });
+
     // 建立 Embed
     const embed = buildReportEmbed(type, todayStr, weekday, events, tasks, infoStats);
 
