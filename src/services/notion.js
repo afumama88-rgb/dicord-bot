@@ -70,7 +70,7 @@ export async function createInfoPage(data) {
       title: [{ text: { content: cleanTitle } }]
     },
     date: {
-      date: { start: new Date().toISOString().split('T')[0] }
+      date: { start: new Date().toISOString() }  // 包含時間：2026-02-01T14:30:00.000Z
     },
     type: {
       select: { name: data.type || '網路文章' }
