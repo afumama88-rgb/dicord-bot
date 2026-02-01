@@ -14,14 +14,20 @@ const CALENDAR_DATABASE_ID = config.notion.databaseIds.calendar;
 const INFO_DATABASE_ID = config.notion.databaseIds.info;
 
 /**
- * 查詢指定日期的行事曆事件
- * @param {string} dateStr - 日期 YYYY-MM-DD
- * @returns {Promise<Array<{title: string, time: string|null}>>}
+ * 查詢未來 7 天內 + 逾期未完成的活動
+ * @param {string} todayStr - 今天日期 YYYY-MM-DD（用於判斷逾期）
+ * @returns {Promise<Array<{title: string, date: string, time: string|null, isOverdue: boolean}>>}
  */
-export async function queryCalendarEvents(dateStr) {
+export async function queryCalendarEvents(todayStr) {
   if (!CALENDAR_DATABASE_ID) {
     return [];
   }
+
+  // 計算 7 天後的日期
+  const today = new Date(todayStr);
+  const weekLater = new Date(today);
+  weekLater.setDate(weekLater.getDate() + 7);
+  const weekLaterStr = formatDate(weekLater);
 
   try {
     const response = await notion.databases.query({
@@ -29,15 +35,23 @@ export async function queryCalendarEvents(dateStr) {
       filter: {
         and: [
           {
-            property: '日期',
-            date: {
-              equals: dateStr
-            }
-          },
-          {
             property: '類型',
             select: {
               equals: '活動'
+            }
+          },
+          {
+            // 排除已完成
+            property: '狀態',
+            select: {
+              does_not_equal: '已完成'
+            }
+          },
+          {
+            // 7 天內或逾期（日期 <= 7天後）
+            property: '日期',
+            date: {
+              on_or_before: weekLaterStr
             }
           }
         ]
@@ -53,6 +67,7 @@ export async function queryCalendarEvents(dateStr) {
     return response.results.map(page => {
       const title = page.properties.Name?.title?.[0]?.text?.content || '未命名事件';
       const dateObj = page.properties['日期']?.date;
+      const dateStr = dateObj?.start?.split('T')[0] || null;
 
       // 提取時間（如果有）
       let time = null;
@@ -63,7 +78,10 @@ export async function queryCalendarEvents(dateStr) {
         }
       }
 
-      return { title, time };
+      // 判斷是否逾期
+      const isOverdue = dateStr && dateStr < todayStr;
+
+      return { title, date: dateStr, time, isOverdue };
     });
 
   } catch (error) {
@@ -73,10 +91,11 @@ export async function queryCalendarEvents(dateStr) {
 }
 
 /**
- * 查詢待處理/進行中的任務
- * @returns {Promise<Array<{title: string, priority: string, deadline: string|null}>>}
+ * 查詢所有未完成的任務（包含逾期）
+ * @param {string} todayStr - 今天日期 YYYY-MM-DD（用於判斷逾期）
+ * @returns {Promise<Array<{title: string, priority: string, deadline: string|null, status: string, isOverdue: boolean}>>}
  */
-export async function queryTasks() {
+export async function queryTasks(todayStr) {
   if (!CALENDAR_DATABASE_ID) {
     return [];
   }
@@ -87,37 +106,28 @@ export async function queryTasks() {
       filter: {
         and: [
           {
-            or: [
-              {
-                property: '狀態',
-                select: {
-                  equals: '待處理'
-                }
-              },
-              {
-                property: '狀態',
-                select: {
-                  equals: '進行中'
-                }
-              }
-            ]
-          },
-          {
             property: '類型',
             select: {
               equals: '任務'
+            }
+          },
+          {
+            // 排除已完成
+            property: '狀態',
+            select: {
+              does_not_equal: '已完成'
             }
           }
         ]
       },
       sorts: [
         {
-          property: '優先級',
-          direction: 'ascending' // 高 -> 中 -> 低
-        },
-        {
           property: '日期',
           direction: 'ascending'
+        },
+        {
+          property: '優先級',
+          direction: 'ascending' // 高 -> 中 -> 低
         }
       ]
     });
@@ -125,10 +135,14 @@ export async function queryTasks() {
     return response.results.map(page => {
       const title = page.properties.Name?.title?.[0]?.text?.content || '未命名任務';
       const priority = page.properties['優先級']?.select?.name || '中';
+      const status = page.properties['狀態']?.select?.name || '待處理';
       const dateObj = page.properties['日期']?.date;
       const deadline = dateObj?.start?.split('T')[0] || null;
 
-      return { title, priority, deadline };
+      // 判斷是否逾期
+      const isOverdue = deadline && deadline < todayStr;
+
+      return { title, priority, deadline, status, isOverdue };
     });
 
   } catch (error) {

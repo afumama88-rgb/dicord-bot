@@ -53,28 +53,24 @@ async function sendDailyReport(type) {
       return;
     }
 
-    // 計算目標日期
-    const targetDate = new Date();
-    if (type === 'preview') {
-      targetDate.setDate(targetDate.getDate() + 1); // 明天
-    }
+    // 計算今天日期（用於判斷逾期）
+    const today = new Date();
+    const todayStr = formatDate(today);
+    const weekday = getWeekday(today);
 
-    const dateStr = formatDate(targetDate);
-    const weekday = getWeekday(targetDate);
-
-    // 查詢資料
+    // 查詢資料（7天內 + 逾期未完成）
     const [events, tasks, infoStats] = await Promise.all([
-      queryCalendarEvents(dateStr),
-      queryTasks(),
+      queryCalendarEvents(todayStr),
+      queryTasks(todayStr),
       queryInfoStats()
     ]);
 
     // 建立 Embed
-    const embed = buildReportEmbed(type, dateStr, weekday, events, tasks, infoStats);
+    const embed = buildReportEmbed(type, todayStr, weekday, events, tasks, infoStats);
 
     await channel.send({ embeds: [embed] });
 
-    logger.info('每日報告已發送', { type, date: dateStr });
+    logger.info('每日報告已發送', { type, date: todayStr });
 
   } catch (error) {
     logger.error('發送每日報告失敗', error);
@@ -94,35 +90,87 @@ function buildReportEmbed(type, dateStr, weekday, events, tasks, infoStats) {
     .setTitle(title)
     .setTimestamp();
 
-  // 行程區塊
+  // 行程區塊（7天內 + 逾期）
   let eventText = '';
+  const overdueEvents = events.filter(e => e.isOverdue);
+  const upcomingEvents = events.filter(e => !e.isOverdue);
+
   if (events.length === 0) {
     eventText = '無行程安排';
   } else {
-    eventText = events.map(e => {
-      const time = e.time || '全天';
-      return `• ${time}　${e.title}`;
-    }).join('\n');
-  }
-  embed.addFields({ name: `📌 ${isPreview ? '明日' : '今日'}行程`, value: eventText });
+    const lines = [];
 
-  // 任務區塊
+    // 先顯示逾期
+    if (overdueEvents.length > 0) {
+      lines.push('⚠️ **逾期活動：**');
+      overdueEvents.forEach(e => {
+        const time = e.time || '全天';
+        lines.push(`• ~~${e.date}~~ ${time}　${e.title}`);
+      });
+    }
+
+    // 再顯示即將到來
+    if (upcomingEvents.length > 0) {
+      if (overdueEvents.length > 0) lines.push('');
+      lines.push('📅 **近期活動：**');
+      upcomingEvents.slice(0, 10).forEach(e => {
+        const time = e.time || '全天';
+        const isToday = e.date === dateStr;
+        const dateLabel = isToday ? '今天' : e.date;
+        lines.push(`• ${dateLabel} ${time}　${e.title}`);
+      });
+      if (upcomingEvents.length > 10) {
+        lines.push(`...還有 ${upcomingEvents.length - 10} 項`);
+      }
+    }
+
+    eventText = lines.join('\n');
+  }
+  embed.addFields({ name: `📌 行程（${events.length} 項）`, value: eventText });
+
+  // 任務區塊（含逾期）
   let taskText = '';
+  const overdueTasks = tasks.filter(t => t.isOverdue);
+  const pendingTasks = tasks.filter(t => !t.isOverdue);
+
   if (tasks.length === 0) {
     taskText = '無待處理任務 🎉';
   } else {
-    taskText = tasks.slice(0, 10).map(t => {
-      const priority = t.priority === '高' ? '🔴' : t.priority === '中' ? '🟡' : '⚪';
-      const deadline = t.deadline ? ` - 截止：${t.deadline}` : '';
-      const urgent = t.deadline === dateStr ? ' ⚠️' : '';
-      return `${priority} ${t.title}${deadline}${urgent}`;
-    }).join('\n');
+    const lines = [];
 
-    if (tasks.length > 10) {
-      taskText += `\n...還有 ${tasks.length - 10} 項`;
+    // 先顯示逾期任務
+    if (overdueTasks.length > 0) {
+      lines.push('⚠️ **逾期任務：**');
+      overdueTasks.slice(0, 5).forEach(t => {
+        const priority = t.priority === '高' ? '🔴' : t.priority === '中' ? '🟡' : '⚪';
+        const status = t.status === '進行中' ? ' [進行中]' : '';
+        lines.push(`${priority} ~~${t.deadline}~~ ${t.title}${status}`);
+      });
+      if (overdueTasks.length > 5) {
+        lines.push(`...還有 ${overdueTasks.length - 5} 項逾期`);
+      }
     }
+
+    // 再顯示待處理任務
+    if (pendingTasks.length > 0) {
+      if (overdueTasks.length > 0) lines.push('');
+      lines.push('📋 **待處理：**');
+      pendingTasks.slice(0, 10).forEach(t => {
+        const priority = t.priority === '高' ? '🔴' : t.priority === '中' ? '🟡' : '⚪';
+        const deadline = t.deadline ? ` - ${t.deadline}` : '';
+        const status = t.status === '進行中' ? ' [進行中]' : '';
+        const isToday = t.deadline === dateStr;
+        const urgent = isToday ? ' ⏰' : '';
+        lines.push(`${priority} ${t.title}${deadline}${status}${urgent}`);
+      });
+      if (pendingTasks.length > 10) {
+        lines.push(`...還有 ${pendingTasks.length - 10} 項`);
+      }
+    }
+
+    taskText = lines.join('\n');
   }
-  embed.addFields({ name: `✅ 待處理任務（${tasks.length} 項）`, value: taskText });
+  embed.addFields({ name: `✅ 任務（${tasks.length} 項）`, value: taskText });
 
   // 資訊收集統計區塊
   let infoText = `今日新增：${infoStats.today} 則\n本週累計：${infoStats.week} 則`;
