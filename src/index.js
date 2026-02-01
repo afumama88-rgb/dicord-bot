@@ -7,6 +7,7 @@ import { Client, GatewayIntentBits, Partials } from 'discord.js';
 import express from 'express';
 import { config } from './config/index.js';
 import { handleReady, handleMessageCreate, handleInteractionCreate } from './events/index.js';
+import { initScheduler } from './services/scheduler.js';
 import * as logger from './utils/logger.js';
 
 // 建立 Discord Client
@@ -25,7 +26,10 @@ const client = new Client({
 });
 
 // 註冊事件處理器
-client.once('ready', () => handleReady(client));
+client.once('ready', () => {
+  handleReady(client);
+  initScheduler(client);
+});
 client.on('messageCreate', handleMessageCreate);
 client.on('interactionCreate', handleInteractionCreate);
 
