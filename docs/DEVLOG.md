@@ -360,16 +360,104 @@ https://www.facebook.com/share/1GLJTsepmb/?mibextid=wwXIfr
 
 ---
 
+## 2026-02-01：AI 標題生成與時區修正
+
+### AI 生成標題
+
+**需求**：社群媒體貼文標題使用 AI 摘要，而非直接截取前 100 字
+
+**實作**：在 `gemini.js` 新增 `generatePostTitle` 函數
+- 內容 ≤30 字直接用原文
+- 內容 >30 字用 Gemini 生成 25 字以內摘要
+
+### 時間戳記時區問題
+
+**問題**：Notion 頁面顯示的「建立時間」是 UTC，不是台北時間
+
+**修正**：使用 `Intl.DateTimeFormat` 指定 `Asia/Taipei` 時區
+
+### 每日通知新增功能
+
+1. **打卡提醒連結**：每日通知底部加入 Discord 打卡頻道連結
+2. **標記用戶**：新增 `DISCORD_NOTIFY_USER_ID` 環境變數，發送通知時 @ 標記
+3. **7天+逾期顯示**：
+   - 行程：顯示 7 天內 + 逾期未完成
+   - 任務：顯示所有未完成（排除「已完成」）
+   - 逾期項目以 ⚠️ 標記、日期加刪除線
+4. **任務摘要**：每個任務下方顯示 📝 摘要（限 50 字）
+
+---
+
+## 2026-02-01：Slash 指令功能
+
+### 新增 Discord Slash 指令
+
+| 指令 | 功能 |
+|------|------|
+| `/notify` | 立即發送每日通知（可選 preview/reminder） |
+| `/status` | 查看機器人狀態與設定 |
+| `/add-event` | 新增活動到 Notion |
+| `/add-task` | 新增任務到 Notion |
+| `/today` | 查看今日行程與逾期任務 |
+
+### 實作架構
+
+```
+src/commands/
+├── index.js      # 指令註冊與管理
+├── notify.js     # /notify
+├── status.js     # /status
+├── addEvent.js   # /add-event
+├── addTask.js    # /add-task
+└── today.js      # /today
+```
+
+---
+
+## 2026-02-01：Notion SDK 版本錯誤（重大 Bug）
+
+### 問題
+
+每日通知查詢 Notion 資料庫失敗：
+```
+notion.databases.query is not a function
+```
+
+### 原因
+
+**Claude 給了不存在的版本號！**
+
+`package.json` 中設定：
+```json
+"@notionhq/client": "^5.7.0"  // ❌ 這個版本根本不存在！
+```
+
+實際上 `@notionhq/client` 最新版本是 `2.x`，從來沒有 5.x 版本。
+
+### 修正
+
+```json
+"@notionhq/client": "^2.2.15"  // ✅ 正確版本
+```
+
+> **教訓**：AI 給的套件版本號不一定正確，應該先到 npm 確認版本是否存在。特別是當 AI 聲稱「使用最新版本」時更要小心。
+
+---
+
 ## 待辦事項
 
-- [ ] 手動觸發報告測試指令
 - [ ] AI 對話頻道功能
 - [ ] 圖片分析功能
 - [ ] 提醒機器人功能
+- [x] 手動觸發報告測試指令（改用 /notify）
 - [x] 修復 Facebook 爬取錯誤訊息
 - [x] 修復社群媒體作者欄位提取
 - [x] 新增 Fallback 機制
 - [x] 日期欄位包含時間
+- [x] AI 生成社群貼文標題
+- [x] 每日通知標記用戶
+- [x] Slash 指令功能
+- [x] 修復 Notion SDK 版本錯誤
 
 ---
 
@@ -383,3 +471,5 @@ https://www.facebook.com/share/1GLJTsepmb/?mibextid=wwXIfr
 6. **避免靜默降級**：錯誤處理不應該隱藏真正的問題，應該明確告知使用者
 7. **參考現有專案**：同樣功能的專案（如 Line Bot）可以直接對照欄位名稱和處理邏輯
 8. **第三方 API 欄位名稱不統一**：Apify 不同 Actor 回傳的欄位名稱可能不同，需要逐一測試
+9. **AI 給的版本號要驗證**：Claude 給了不存在的 `@notionhq/client@5.7.0`，實際最新是 `2.x`。永遠要到 npm 確認版本是否存在
+10. **伺服器時區問題**：Zeabur/Railway 等平台預設 UTC，日期計算要明確指定時區

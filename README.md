@@ -26,9 +26,20 @@ Discord 自動化機器人，整合 Notion、Google Calendar、Gemini AI。
 - **08:00** 當日提醒
 
 內容包含：
-- 行程安排
-- 待處理任務
+- 7 天內行程 + 逾期未完成活動
+- 所有未完成任務（含摘要）
 - 資訊收集統計
+- 打卡提醒連結
+
+### ⚡ Slash 指令
+
+| 指令 | 功能 |
+|------|------|
+| `/notify` | 立即發送每日通知 |
+| `/status` | 查看機器人狀態與設定 |
+| `/add-event` | 新增活動到 Notion |
+| `/add-task` | 新增任務到 Notion |
+| `/today` | 查看今日行程與任務 |
 
 ## 技術架構
 
@@ -66,9 +77,11 @@ npm run dev
 ```env
 # Discord
 DISCORD_TOKEN=你的 Bot Token
+DISCORD_CLIENT_ID=你的 Application ID
 DISCORD_INFO_COLLECT_CHANNEL_ID=資訊收集頻道 ID
 DISCORD_CALENDAR_CHANNEL_ID=行事曆助手頻道 ID
 DISCORD_NOTIFY_CHANNEL_ID=每日通知頻道 ID
+DISCORD_NOTIFY_USER_ID=要標記的用戶 ID（選用）
 
 # Notion
 NOTION_API_KEY=你的 Notion Integration Token
@@ -92,7 +105,9 @@ APIFY_API_KEY=你的 Apify Token
 1. 前往 [Discord Developer Portal](https://discord.com/developers/applications)
 2. 建立 Application → Bot
 3. 開啟 **Message Content Intent**（重要！）
-4. OAuth2 → URL Generator → 勾選 `bot`
+4. OAuth2 → URL Generator → Scopes 勾選：
+   - `bot`
+   - `applications.commands`（Slash 指令需要）
 5. Bot Permissions 勾選：
    - View Channels
    - Send Messages
@@ -100,6 +115,7 @@ APIFY_API_KEY=你的 Apify Token
    - Read Message History
    - Add Reactions
 6. 使用產生的連結邀請 Bot 到伺服器
+7. 記下 Application ID（設為 `DISCORD_CLIENT_ID`）
 
 ## Google OAuth 設定
 
