@@ -4,12 +4,15 @@
 
 import * as logger from '../utils/logger.js';
 import { config } from '../config/index.js';
+import { registerCommands } from '../commands/index.js';
 
 /**
  * 處理 Bot 就緒事件
  * @param {import('discord.js').Client} client - Discord Client
  */
-export function handleReady(client) {
+export async function handleReady(client) {
+  // 註冊 Slash 指令
+  await registerCommands(client);
   logger.info(`Discord Bot 已登入`, {
     tag: client.user.tag,
     id: client.user.id

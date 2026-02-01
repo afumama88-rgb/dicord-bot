@@ -26,8 +26,8 @@ const client = new Client({
 });
 
 // 註冊事件處理器
-client.once('ready', () => {
-  handleReady(client);
+client.once('ready', async () => {
+  await handleReady(client);
   initScheduler(client);
 });
 client.on('messageCreate', handleMessageCreate);
