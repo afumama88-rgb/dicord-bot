@@ -135,6 +135,10 @@ function buildReportEmbed(type, dateStr, weekday, events, tasks, infoStats) {
   }
   embed.addFields({ name: '📚 資訊收集', value: infoText });
 
+  // 打卡提醒
+  const checkinText = '👉 [點我前往打卡](https://discord.com/channels/876831894900199474/1181522618717851710)';
+  embed.addFields({ name: '🔔 每日打卡', value: checkinText });
+
   // Footer
   embed.setFooter({ text: '由 Cyclone Discord Bot 自動發送' });
 
