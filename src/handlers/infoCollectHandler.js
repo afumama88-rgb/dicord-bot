@@ -125,16 +125,21 @@ async function fetchContent(parsed) {
     case 'facebook':
     case 'instagram':
     case 'threads': {
-      // 嘗試使用 Apify，失敗則使用一般爬蟲
-      if (isApifyAvailable()) {
-        try {
-          return await scrapeSocialMedia(url, type);
-        } catch (error) {
-          logger.warn(`Apify 爬取失敗，嘗試一般爬蟲`, { type, error: error.message });
-          return await scrapeWebPage(url);
-        }
+      // 社群媒體必須使用 Apify
+      if (!isApifyAvailable()) {
+        logger.warn(`Apify 未設定，無法爬取 ${type}`, { url });
+        throw new Error(`${type.toUpperCase()} 需要設定 APIFY_API_KEY 才能爬取`);
       }
-      return await scrapeWebPage(url);
+
+      const result = await scrapeSocialMedia(url, type);
+
+      // 檢查 Apify 是否成功
+      if (!result.success) {
+        logger.warn(`Apify 爬取 ${type} 失敗`, { url, error: result.error });
+        throw new Error(result.error || `無法爬取 ${type} 內容`);
+      }
+
+      return result;
     }
 
     case 'web':

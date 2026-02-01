@@ -226,12 +226,74 @@ validation_error: 'source' is not a property that exists.
 
 ---
 
+## 2026-02-01：Facebook 爬取問題修復
+
+### 問題：Facebook 連結收集失敗
+
+```
+收集失敗 - 無法處理此連結 - HTTP 400: Bad Request
+```
+
+### 診斷
+
+1. Facebook/Instagram/Threads 會封鎖一般爬蟲
+2. 需要使用 Apify 服務才能正確爬取
+3. 原程式碼問題：當 Apify 失敗時會靜默降級到一般爬蟲，導致看到 HTTP 400 錯誤而非真正原因
+
+### 原因
+
+原程式碼邏輯：
+```javascript
+if (isApifyAvailable()) {
+  try {
+    return await scrapeSocialMedia(url, type);
+  } catch (error) {
+    return await scrapeWebPage(url); // 降級到一般爬蟲
+  }
+}
+return await scrapeWebPage(url); // 直接用一般爬蟲
+```
+
+問題：
+- 如果 `APIFY_API_KEY` 未設定，會直接跳到一般爬蟲
+- Facebook 封鎖一般爬蟲，返回 HTTP 400
+- 使用者看到的錯誤訊息無法反映真正原因
+
+### 修正
+
+```javascript
+if (!isApifyAvailable()) {
+  throw new Error(`${type.toUpperCase()} 需要設定 APIFY_API_KEY 才能爬取`);
+}
+
+const result = await scrapeSocialMedia(url, type);
+
+if (!result.success) {
+  throw new Error(result.error || `無法爬取 ${type} 內容`);
+}
+
+return result;
+```
+
+### 檢查清單
+
+確認 Zeabur 上有正確設定 `APIFY_API_KEY`：
+1. Zeabur Dashboard → 專案 → Variables
+2. 確認有 `APIFY_API_KEY` 變數（不是 `APIFY_API_TOKEN`）
+3. 確認值是正確的 Apify API Token
+4. 重新部署後檢查 Bot 啟動日誌：`apifyService: '已設定'`
+
+> **教訓**：靜默降級會隱藏真正的錯誤。對於必須使用特定服務的功能，應該明確報錯而非降級。
+
+---
+
 ## 待辦事項
 
 - [ ] 手動觸發報告測試指令
 - [ ] AI 對話頻道功能
 - [ ] 圖片分析功能
 - [ ] 提醒機器人功能
+- [x] 修復 Facebook 爬取錯誤訊息
 
 ---
 
@@ -242,3 +304,4 @@ validation_error: 'source' is not a property that exists.
 3. **使用者的 Notion 結構要先確認**：不能假設欄位存在
 4. **Google OAuth 很容易出錯**：Token 格式、憑證配對都要仔細
 5. **錯誤訊息要仔細看**：大部分問題答案都在錯誤訊息裡
+6. **避免靜默降級**：錯誤處理不應該隱藏真正的問題，應該明確告知使用者
