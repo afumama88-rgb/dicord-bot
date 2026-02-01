@@ -26,17 +26,31 @@ function formatNotionUrl(pageId) {
 }
 
 /**
- * 取得建立時間戳記
+ * 取得建立時間戳記（台北時區）
  * @returns {string} 格式化的時間戳 [YYYY-MM-DD HH:mm]
  */
 function getCreatedTimestamp() {
   const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-  const day = String(now.getDate()).padStart(2, '0');
-  const hours = String(now.getHours()).padStart(2, '0');
-  const minutes = String(now.getMinutes()).padStart(2, '0');
-  return `[${year}-${month}-${day} ${hours}:${minutes}]`;
+  // 使用台北時區
+  const options = {
+    timeZone: 'Asia/Taipei',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false
+  };
+  const formatter = new Intl.DateTimeFormat('zh-TW', options);
+  const parts = formatter.formatToParts(now);
+
+  const year = parts.find(p => p.type === 'year').value;
+  const month = parts.find(p => p.type === 'month').value;
+  const day = parts.find(p => p.type === 'day').value;
+  const hour = parts.find(p => p.type === 'hour').value;
+  const minute = parts.find(p => p.type === 'minute').value;
+
+  return `[${year}-${month}-${day} ${hour}:${minute}]`;
 }
 
 /**
