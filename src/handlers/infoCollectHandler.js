@@ -8,7 +8,7 @@ import { getYouTubeInfo } from '../services/youtube.js';
 import { scrapeSocialMedia, isApifyAvailable } from '../services/apify.js';
 import { scrapeWebPage } from '../services/scraper.js';
 import { createInfoPage } from '../services/notion.js';
-import { cacheNotionMapping } from '../utils/cache.js';
+import { cacheNotionMapping, markUrlProcessing, markUrlDone } from '../utils/cache.js';
 import {
   createInfoCollectEmbed,
   createInfoCollectErrorEmbed,
@@ -43,6 +43,12 @@ async function processUrl(message, url) {
 
   if (!parsed) {
     logger.debug('無法解析的 URL', { url });
+    return;
+  }
+
+  // 防止重複處理同一個 URL
+  if (!markUrlProcessing(url)) {
+    logger.debug('URL 正在處理中，跳過', { url });
     return;
   }
 
@@ -130,6 +136,9 @@ async function processUrl(message, url) {
 
     // 添加失敗反應
     await message.react('❌');
+  } finally {
+    // 無論成功或失敗，都標記 URL 處理完成
+    markUrlDone(url);
   }
 }
 

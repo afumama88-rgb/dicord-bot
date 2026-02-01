@@ -77,6 +77,29 @@ export function clearCache() {
   cache.flushAll();
 }
 
+/**
+ * 標記 URL 正在處理中（防止重複處理）
+ * @param {string} url - URL
+ * @returns {boolean} true 如果可以處理，false 如果正在處理中
+ */
+export function markUrlProcessing(url) {
+  const key = `processing:${url}`;
+  if (cache.has(key)) {
+    return false; // 已經在處理中
+  }
+  cache.set(key, true, 60); // 60 秒內不重複處理
+  return true;
+}
+
+/**
+ * 標記 URL 處理完成
+ * @param {string} url - URL
+ */
+export function markUrlDone(url) {
+  const key = `processing:${url}`;
+  cache.del(key);
+}
+
 export default {
   cacheAnalysis,
   cacheGet,
@@ -84,5 +107,7 @@ export default {
   cacheNotionMapping,
   getNotionPageId,
   getCacheStats,
-  clearCache
+  clearCache,
+  markUrlProcessing,
+  markUrlDone
 };
