@@ -71,12 +71,15 @@ async function processUrl(message, url) {
 
     // 檢查是否為空內容（社群媒體可能因隱私設定無法爬取）
     const isSocialMedia = ['facebook', 'instagram', 'threads'].includes(parsed.type);
-    const isEmptyContent = !content.description &&
-      (content.title === `${parsed.type} 貼文` || content.title === 'Facebook 貼文' ||
-       content.title === 'Instagram 貼文' || content.title === 'Threads 貼文');
+    const isEmptyContent = !content.description ||
+      content.title === `${parsed.type} 貼文` ||
+      content.title === 'Facebook 貼文' ||
+      content.title === 'Instagram 貼文' ||
+      content.title === 'Threads 貼文';
 
     if (isSocialMedia && isEmptyContent) {
-      throw new Error('無法取得貼文內容，可能是私人貼文或需要登入才能查看');
+      const platformName = { facebook: 'Facebook', instagram: 'Instagram', threads: 'Threads' }[parsed.type];
+      throw new Error(`無法擷取此 ${platformName} 內容（可能需要登入）`);
     }
 
     // 儲存到 Notion

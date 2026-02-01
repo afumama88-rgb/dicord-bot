@@ -70,7 +70,104 @@ export async function scrapeSocialMedia(url, platform) {
 
   } catch (error) {
     console.error(`Apify 爬取失敗 (${platform}):`, error.message);
+
+    // 嘗試 Fallback：從 meta 標籤提取
+    const fallbackData = await scrapeMetaFallback(url, platform);
+    if (fallbackData) {
+      return fallbackData;
+    }
+
     return createFallbackResult(url, platform, error.message);
+  }
+}
+
+/**
+ * Fallback: 使用 fetch 從 meta 標籤提取資訊
+ * 當 Apify 失敗時使用
+ */
+async function scrapeMetaFallback(url, platform) {
+  try {
+    console.log(`[Fallback] 嘗試從 meta 標籤提取: ${url}`);
+
+    const response = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'zh-TW,zh;q=0.9,en;q=0.8'
+      },
+      redirect: 'follow'
+    });
+
+    if (!response.ok) {
+      console.log(`[Fallback] HTTP ${response.status}`);
+      return null;
+    }
+
+    const html = await response.text();
+
+    // 提取 meta 標籤
+    const ogTitle = html.match(/<meta[^>]*property="og:title"[^>]*content="([^"]*)"/) ||
+                    html.match(/<meta[^>]*content="([^"]*)"[^>]*property="og:title"/);
+    const ogDesc = html.match(/<meta[^>]*property="og:description"[^>]*content="([^"]*)"/) ||
+                   html.match(/<meta[^>]*content="([^"]*)"[^>]*property="og:description"/);
+    const ogImage = html.match(/<meta[^>]*property="og:image"[^>]*content="([^"]*)"/) ||
+                    html.match(/<meta[^>]*content="([^"]*)"[^>]*property="og:image"/);
+
+    const title = ogTitle?.[1] || '';
+    const description = ogDesc?.[1] || '';
+    const thumbnail = ogImage?.[1] || null;
+
+    // 如果沒有內容，fallback 失敗
+    if (!title && !description) {
+      console.log(`[Fallback] 無法從 meta 標籤提取內容`);
+      return null;
+    }
+
+    // 提取作者
+    let author = '未知';
+
+    if (platform === 'threads') {
+      // Threads: 從 URL 或 title 提取
+      const thMatch = url.match(/threads\.(com|net)\/@([^/]+)/);
+      if (thMatch) {
+        author = thMatch[2];
+      } else if (title.includes(' on Threads')) {
+        author = title.split(' on Threads')[0];
+      }
+    } else if (platform === 'instagram') {
+      // Instagram: 從 URL 提取
+      const igMatch = url.match(/instagram\.com\/([^/]+)/);
+      if (igMatch && !['p', 'reels', 'reel', 'stories', 'tv'].includes(igMatch[1])) {
+        author = igMatch[1];
+      }
+    } else if (platform === 'facebook') {
+      // Facebook: 從 title 提取（通常格式是 "Author Name - Post"）
+      if (title && !title.includes('Facebook')) {
+        const dashIndex = title.indexOf(' - ');
+        if (dashIndex > 0) {
+          author = title.substring(0, dashIndex);
+        }
+      }
+    }
+
+    const typeMap = { facebook: 'FB', instagram: 'IG', threads: 'TH' };
+
+    console.log(`[Fallback] 成功提取: author=${author}, content長度=${description.length}`);
+
+    return {
+      title: (description || title).slice(0, 100) || `${platform} 貼文`,
+      description: description || title,
+      thumbnail: thumbnail,
+      author: author,
+      url: url,
+      type: typeMap[platform] || platform.toUpperCase(),
+      success: true,
+      fromFallback: true
+    };
+
+  } catch (error) {
+    console.error(`[Fallback] 失敗:`, error.message);
+    return null;
   }
 }
 
