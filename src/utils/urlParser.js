@@ -11,9 +11,10 @@ const URL_PATTERNS = {
   ],
   facebook: [
     /(?:https?:\/\/)?(?:www\.)?facebook\.com\/[^\/]+\/(?:posts|videos|photos)\/[^\s]+/,
-    /(?:https?:\/\/)?(?:www\.)?facebook\.com\/(?:watch|reel)\/[^\s]+/,
+    /(?:https?:\/\/)?(?:www\.)?facebook\.com\/(?:watch|reel|share)\/[^\s]+/,
     /(?:https?:\/\/)?(?:www\.)?fb\.watch\/[^\s]+/,
-    /(?:https?:\/\/)?(?:www\.)?fb\.com\/[^\s]+/
+    /(?:https?:\/\/)?(?:www\.)?fb\.com\/[^\s]+/,
+    /(?:https?:\/\/)?(?:m\.)?facebook\.com\/story\.php[^\s]+/
   ],
   instagram: [
     /(?:https?:\/\/)?(?:www\.)?instagram\.com\/p\/([a-zA-Z0-9_-]+)/,
