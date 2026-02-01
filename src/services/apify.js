@@ -58,8 +58,14 @@ export async function scrapeSocialMedia(url, platform) {
     if (platform === 'threads') {
       // sinam7/threads-post-scraper 使用 url 欄位
       runInput = { url };
+    } else if (platform === 'instagram') {
+      // apify/instagram-scraper 使用 directUrls
+      runInput = {
+        directUrls: [url],
+        resultsLimit: 1
+      };
     } else {
-      // Facebook/Instagram 使用 startUrls
+      // Facebook 使用 startUrls
       runInput = {
         startUrls: [{ url }],
         resultsLimit: 1
