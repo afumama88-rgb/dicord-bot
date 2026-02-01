@@ -40,13 +40,13 @@ export const config = {
     model: process.env.GEMINI_MODEL || 'gemini-2.5-flash'
   },
 
-  // Apify 設定
+  // Apify 設定（對照 Line Bot 使用的 Actor）
   apify: {
     apiKey: process.env.APIFY_API_KEY,
     actors: {
       facebook: 'apify/facebook-posts-scraper',
-      instagram: 'apify/instagram-api-scraper',
-      threads: 'apify/threads-scraper'
+      instagram: 'apify/instagram-scraper',
+      threads: 'sinam7/threads-post-scraper'
     }
   },
 

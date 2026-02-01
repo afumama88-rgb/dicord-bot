@@ -76,20 +76,56 @@ export async function scrapeSocialMedia(url, platform) {
 
 /**
  * 標準化貼文資料（不同平台返回的欄位名稱不同）
+ * 對照 Line Bot 的欄位提取邏輯
  */
 function normalizePostData(post, url, platform) {
   // 記錄原始資料以便除錯
-  console.log(`[Apify] ${platform} 原始資料:`, JSON.stringify(post, null, 2));
+  console.log(`[Apify] ${platform} 原始欄位:`, Object.keys(post));
 
-  // 根據不同平台提取欄位
-  const text = post.text || post.caption || post.content || post.message || '';
+  let author = '未知';
+  let text = '';
+  let thumbnail = null;
 
-  // 作者欄位 - Facebook 可能用 pageName, user, name 等
-  const author = post.pageName || post.userName || post.user?.name || post.name ||
-                 post.authorName || post.ownerUsername || post.username || post.author || '未知';
+  // 根據不同平台提取欄位（對照 Line Bot 邏輯）
+  if (platform === 'facebook') {
+    // Facebook 作者欄位優先級
+    author = post.pageName || post.userName || post.name || post.user || post.groupTitle || '未知';
+    // Facebook 內容欄位優先級
+    text = post.text || post.message || post.postText || post.description ||
+           post.story || post.content || post.seo_title || '';
+    thumbnail = post.imageUrl || post.thumbnailUrl || post.image || post.photoUrl || null;
 
-  const thumbnail = post.imageUrl || post.thumbnailUrl || post.displayUrl ||
-                    post.image || post.media?.[0]?.url || post.photoUrl || null;
+  } else if (platform === 'instagram') {
+    // Instagram 支援嵌套 owner 物件
+    const ownerInfo = (typeof post.owner === 'object' && post.owner) ? post.owner : {};
+    author = post.ownerUsername || post.username || ownerInfo.username ||
+             post.ownerFullName || ownerInfo.fullName || '';
+    // 如果還是沒有，嘗試從 URL 提取
+    if (!author) {
+      const igMatch = url.match(/instagram\.com\/([^/]+)/);
+      if (igMatch && !['p', 'reels', 'reel', 'stories', 'tv'].includes(igMatch[1])) {
+        author = igMatch[1];
+      }
+    }
+    if (!author) author = '未知';
+    // Instagram 內容
+    text = post.caption || post.text || post.description || '';
+    thumbnail = post.displayUrl || post.thumbnailUrl || post.imageUrl || null;
+
+  } else if (platform === 'threads') {
+    // Threads 優先從 URL 提取用戶名
+    const thMatch = url.match(/threads\.(com|net)\/@([^/]+)/);
+    if (thMatch) {
+      author = thMatch[2];
+    } else {
+      author = post.ownerUsername || post.username || post.author || post.user || '未知';
+    }
+    // Threads 內容
+    text = post.text || post.caption || post.content || post.postText || '';
+    thumbnail = post.imageUrl || post.thumbnailUrl || post.displayUrl || null;
+  }
+
+  // 通用欄位
   const likes = post.likesCount || post.likeCount || post.likes || post.reactions || 0;
   const comments = post.commentsCount || post.commentCount || post.comments || 0;
   const timestamp = post.timestamp || post.takenAt || post.createdAt || post.time || null;
