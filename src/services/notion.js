@@ -40,14 +40,34 @@ function getCreatedTimestamp() {
 }
 
 /**
+ * 清理作者名稱（移除 multi_select 不接受的字元）
+ * @param {string} author - 原始作者名稱
+ * @returns {string} 清理後的名稱
+ */
+function sanitizeAuthor(author) {
+  if (!author) return null;
+  // 移除逗號（multi_select 分隔符）和其他特殊字元
+  return author
+    .replace(/[,，]/g, ' ')  // 逗號換成空格
+    .replace(/[\n\r\t]/g, ' ')  // 換行換成空格
+    .trim()
+    .slice(0, 100);  // 限制長度
+}
+
+/**
  * 建立資訊收集頁面（#資訊收集 頻道用）
  * @param {Object} data - 頁面資料
  * @returns {Promise<{id: string, url: string}>}
  */
 export async function createInfoPage(data) {
+  // 清理和驗證資料
+  const cleanTitle = (data.title || '無標題').slice(0, 100);
+  const cleanDescription = data.description ? data.description.slice(0, 2000) : null;
+  const cleanAuthor = sanitizeAuthor(data.author);
+
   const properties = {
     title: {
-      title: [{ text: { content: data.title || '無標題' } }]
+      title: [{ text: { content: cleanTitle } }]
     },
     date: {
       date: { start: new Date().toISOString().split('T')[0] }
@@ -61,29 +81,42 @@ export async function createInfoPage(data) {
   };
 
   // 摘要（如果有）
-  if (data.description) {
+  if (cleanDescription) {
     properties['摘要'] = {
-      rich_text: [{ text: { content: data.description.slice(0, 2000) } }]
+      rich_text: [{ text: { content: cleanDescription } }]
     };
   }
 
-  // 作者（如果有）
-  if (data.author) {
+  // 作者（如果有且有效）
+  if (cleanAuthor && cleanAuthor.length > 0) {
     properties.Author = {
-      multi_select: [{ name: data.author }]
+      multi_select: [{ name: cleanAuthor }]
     };
   }
 
-  const response = await notion.pages.create({
-    parent: { database_id: INFO_DATABASE_ID },
-    properties: properties,
-    children: buildInfoPageContent(data)
-  });
+  try {
+    const response = await notion.pages.create({
+      parent: { database_id: INFO_DATABASE_ID },
+      properties: properties,
+      children: buildInfoPageContent(data)
+    });
 
-  return {
-    id: response.id,
-    url: formatNotionUrl(response.id)
-  };
+    return {
+      id: response.id,
+      url: formatNotionUrl(response.id)
+    };
+  } catch (error) {
+    // 記錄詳細錯誤資訊以便除錯
+    console.error('Notion 建立頁面失敗:', {
+      error: error.message,
+      code: error.code,
+      title: cleanTitle,
+      author: cleanAuthor,
+      type: data.type,
+      url: data.url
+    });
+    throw error;
+  }
 }
 
 /**

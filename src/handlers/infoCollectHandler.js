@@ -59,6 +59,16 @@ async function processUrl(message, url) {
       throw new Error('無法取得內容');
     }
 
+    // 記錄爬取到的內容
+    logger.info('爬取內容', {
+      url,
+      type: parsed.type,
+      title: content.title?.slice(0, 50),
+      author: content.author,
+      hasDescription: !!content.description,
+      descriptionLength: content.description?.length || 0
+    });
+
     // 儲存到 Notion
     const notionResult = await createInfoPage({
       title: content.title,
