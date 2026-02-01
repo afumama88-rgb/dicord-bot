@@ -1,6 +1,6 @@
 /**
  * Notion API 服務
- * 使用 @notionhq/client v5.7.0（對應 API v2025-09-03）
+ * 使用 @notionhq/client v2.2.15
  */
 
 import { Client } from '@notionhq/client';
