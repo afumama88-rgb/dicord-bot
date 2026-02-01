@@ -53,10 +53,20 @@ export async function scrapeSocialMedia(url, platform) {
   }
 
   try {
-    const run = await client.actor(actorId).call({
-      startUrls: [{ url }],
-      resultsLimit: 1
-    });
+    // 不同 Actor 需要不同的輸入格式
+    let runInput;
+    if (platform === 'threads') {
+      // sinam7/threads-post-scraper 使用 url 欄位
+      runInput = { url };
+    } else {
+      // Facebook/Instagram 使用 startUrls
+      runInput = {
+        startUrls: [{ url }],
+        resultsLimit: 1
+      };
+    }
+
+    const run = await client.actor(actorId).call(runInput);
 
     const { items } = await client.dataset(run.defaultDatasetId).listItems();
 
