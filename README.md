@@ -30,6 +30,7 @@ Discord 自動化機器人，整合 Notion、Google Calendar、Gemini AI。
 - 所有未完成任務（含摘要）
 - 資訊收集統計
 - 打卡提醒連結
+- Notion 資料庫快捷連結
 
 ### ⚡ Slash 指令
 

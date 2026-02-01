@@ -385,6 +385,7 @@ https://www.facebook.com/share/1GLJTsepmb/?mibextid=wwXIfr
    - 任務：顯示所有未完成（排除「已完成」）
    - 逾期項目以 ⚠️ 標記、日期加刪除線
 4. **任務摘要**：每個任務下方顯示 📝 摘要（限 50 字）
+5. **Notion 資料庫連結**：行程與任務區塊底部加入「開啟 Notion」快捷連結
 
 ---
 
