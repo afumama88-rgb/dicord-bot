@@ -67,11 +67,14 @@ export function extractUrls(text) {
 
   const matches = text.match(urlRegex) || [];
 
-  // 清理 URL（移除尾端的標點符號）
-  return matches.map(url => {
+  // 清理 URL（移除尾端的標點符號）並去重複
+  const cleanedUrls = matches.map(url => {
     // 移除常見的尾端標點
     return url.replace(/[.,;:!?'")\]]+$/, '');
   });
+
+  // 去重複（保持順序）
+  return [...new Set(cleanedUrls)];
 }
 
 /**
