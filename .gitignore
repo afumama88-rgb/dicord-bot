@@ -33,3 +33,4 @@ build/
 # Cache
 .cache/
 *.cache
+line-agent/
