@@ -189,10 +189,55 @@ function parseGeminiResponse(responseText) {
   }
 }
 
+/**
+ * 為社群媒體貼文生成標題
+ * @param {string} content - 貼文內容
+ * @param {string} platform - 平台名稱 (facebook/instagram/threads)
+ * @returns {Promise<string>} 標題（20字內）
+ */
+export async function generatePostTitle(content, platform = '') {
+  if (!content || content.trim().length === 0) {
+    return null;
+  }
+
+  // 如果內容很短，直接用原文
+  if (content.length <= 30) {
+    return content.trim();
+  }
+
+  try {
+    const response = await ai.models.generateContent({
+      model: MODEL,
+      contents: [
+        {
+          text: `請用一句話（最多25個中文字）摘要以下社群媒體貼文的主題或重點。
+只回覆摘要文字，不要加引號、標點符號開頭、或其他格式。
+如果內容是對話或閒聊，提取主要話題。
+
+貼文內容：
+${content.slice(0, 1000)}`
+        }
+      ]
+    });
+
+    const title = response.text
+      .trim()
+      .replace(/^["「『]|["」』]$/g, '')  // 移除引號
+      .replace(/^[，。、：；！？,.;:!?]+/, '')  // 移除開頭標點
+      .slice(0, 50);
+
+    return title || null;
+  } catch (error) {
+    console.error('Gemini 標題生成失敗:', error.message);
+    return null;
+  }
+}
+
 export default {
   extractCalendarFromText,
   extractCalendarFromImage,
   extractCalendarFromPdf,
   generateSummary,
+  generatePostTitle,
   MODEL
 };

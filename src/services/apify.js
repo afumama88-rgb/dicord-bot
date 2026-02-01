@@ -4,6 +4,7 @@
 
 import { ApifyClient } from 'apify-client';
 import { config } from '../config/index.js';
+import { generatePostTitle } from './gemini.js';
 
 // Apify 客戶端（延遲初始化）
 let apifyClient = null;
@@ -82,7 +83,7 @@ export async function scrapeSocialMedia(url, platform) {
 
     const post = items[0];
 
-    return normalizePostData(post, url, platform);
+    return await normalizePostData(post, url, platform);
 
   } catch (error) {
     console.error(`Apify 爬取失敗 (${platform}):`, error.message);
@@ -191,7 +192,7 @@ async function scrapeMetaFallback(url, platform) {
  * 標準化貼文資料（不同平台返回的欄位名稱不同）
  * 對照 Line Bot 的欄位提取邏輯
  */
-function normalizePostData(post, url, platform) {
+async function normalizePostData(post, url, platform) {
   // 記錄原始資料以便除錯
   console.log(`[Apify] ${platform} 原始欄位:`, Object.keys(post));
 
@@ -250,8 +251,15 @@ function normalizePostData(post, url, platform) {
     threads: 'TH'
   };
 
+  // 使用 AI 生成標題，失敗時 fallback 到截取前 100 字
+  let title = await generatePostTitle(text, platform);
+  if (!title) {
+    title = text.slice(0, 100) || `${platform} 貼文`;
+  }
+  console.log(`[Apify] 生成標題: ${title}`);
+
   return {
-    title: text.slice(0, 100) || `${platform} 貼文`,
+    title: title,
     description: text,
     thumbnail: thumbnail,
     author: author,
