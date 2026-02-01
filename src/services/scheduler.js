@@ -76,7 +76,13 @@ async function sendDailyReport(type) {
     // 建立 Embed
     const embed = buildReportEmbed(type, todayStr, weekday, events, tasks, infoStats);
 
-    await channel.send({ embeds: [embed] });
+    // 組合訊息內容（如果有設定要標記的用戶）
+    const messageOptions = { embeds: [embed] };
+    if (config.discord.notifyUserId) {
+      messageOptions.content = `<@${config.discord.notifyUserId}>`;
+    }
+
+    await channel.send(messageOptions);
 
     logger.info('每日報告已發送', { type, date: todayStr });
 

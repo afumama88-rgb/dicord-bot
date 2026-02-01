@@ -9,7 +9,8 @@ export const config = {
     clientId: process.env.DISCORD_CLIENT_ID,
     infoCollectChannelId: process.env.DISCORD_INFO_COLLECT_CHANNEL_ID,
     calendarChannelId: process.env.DISCORD_CALENDAR_CHANNEL_ID,
-    notifyChannelId: process.env.DISCORD_NOTIFY_CHANNEL_ID
+    notifyChannelId: process.env.DISCORD_NOTIFY_CHANNEL_ID,
+    notifyUserId: process.env.DISCORD_NOTIFY_USER_ID
   },
 
   // Notion 設定
