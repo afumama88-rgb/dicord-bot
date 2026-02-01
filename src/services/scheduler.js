@@ -145,6 +145,9 @@ function buildReportEmbed(type, dateStr, weekday, events, tasks, infoStats) {
         const priority = t.priority === '高' ? '🔴' : t.priority === '中' ? '🟡' : '⚪';
         const status = t.status === '進行中' ? ' [進行中]' : '';
         lines.push(`${priority} ~~${t.deadline}~~ ${t.title}${status}`);
+        if (t.summary) {
+          lines.push(`　　📝 ${t.summary.slice(0, 50)}`);
+        }
       });
       if (overdueTasks.length > 5) {
         lines.push(`...還有 ${overdueTasks.length - 5} 項逾期`);
@@ -162,6 +165,9 @@ function buildReportEmbed(type, dateStr, weekday, events, tasks, infoStats) {
         const isToday = t.deadline === dateStr;
         const urgent = isToday ? ' ⏰' : '';
         lines.push(`${priority} ${t.title}${deadline}${status}${urgent}`);
+        if (t.summary) {
+          lines.push(`　　📝 ${t.summary.slice(0, 50)}`);
+        }
       });
       if (pendingTasks.length > 10) {
         lines.push(`...還有 ${pendingTasks.length - 10} 項`);

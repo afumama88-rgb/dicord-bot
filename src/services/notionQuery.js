@@ -138,11 +138,12 @@ export async function queryTasks(todayStr) {
       const status = page.properties['狀態']?.select?.name || '待處理';
       const dateObj = page.properties['日期']?.date;
       const deadline = dateObj?.start?.split('T')[0] || null;
+      const summary = page.properties['摘要']?.rich_text?.[0]?.text?.content || null;
 
       // 判斷是否逾期
       const isOverdue = deadline && deadline < todayStr;
 
-      return { title, priority, deadline, status, isOverdue };
+      return { title, priority, deadline, status, isOverdue, summary };
     });
 
   } catch (error) {
