@@ -447,7 +447,7 @@ notion.databases.query is not a function
 
 ## 2026-02-02：公文 PDF 解析優化
 
-### 問題：PDF 公文無法解析
+### 問題 1：PDF 公文無法解析
 
 ```
 行事曆解析失敗 {"error":"無法從內容中提取有效的日期資訊","contentType":"pdf"}
@@ -465,6 +465,34 @@ notion.databases.query is not a function
 2. **多種日期格式**：支援 `114年2月6日`、`114/02/06`、`2025-02-06` 等格式
 3. **公文結構提示**：說明「說明」段落通常包含重要日期
 4. **優先級判斷**：有截止日期且較近的設為「高」
+
+### 問題 2：PDF 解析後內容不完整
+
+**現象**：
+- 只抓到公文發文日期，沒抓到內文中的 deadline
+- Notion 頁面完全空白，沒有摘要
+
+**原因**：
+1. `pdf-parse` 提取文字不完整
+2. Gemini 回傳 `summary` 但 buttonHandler 使用 `description`（欄位名稱不匹配）
+3. 若只有 deadline 沒有 startDate，會判定為「無日期」
+
+### 修正
+
+1. **PDF 直接送給 Gemini**：不再依賴 `pdf-parse`，直接把 PDF 作為 inlineData 送給 Gemini 分析
+2. **新增 description 別名**：`parseGeminiResponse` 回傳時同時提供 `summary` 和 `description`
+3. **智慧日期處理**：若無 startDate 但有 deadline，自動使用 deadline 作為日期
+
+### 新增：打卡模板
+
+每日通知的打卡提醒新增可複製模板：
+```
+2026-02-02
+:todo:
+:todo:
+:todo:
+@cyclonetw
+```
 
 ---
 
