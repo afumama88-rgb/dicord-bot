@@ -14,28 +14,53 @@ const ai = new GoogleGenAI({ apiKey: config.gemini.apiKey });
 const MODEL = config.gemini.model;
 
 /**
+ * 取得台北時區的今天日期
+ */
+function getTaipeiToday() {
+  const options = {
+    timeZone: 'Asia/Taipei',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  };
+  const formatter = new Intl.DateTimeFormat('zh-TW', options);
+  const parts = formatter.formatToParts(new Date());
+  const year = parts.find(p => p.type === 'year').value;
+  const month = parts.find(p => p.type === 'month').value;
+  const day = parts.find(p => p.type === 'day').value;
+  return `${year}-${month}-${day}`;
+}
+
+/**
  * 行事曆資訊提取 Prompt
  */
 function getCalendarExtractionPrompt() {
-  const today = new Date().toISOString().split('T')[0];
+  const today = getTaipeiToday();
+  const rocYear = new Date().getFullYear() - 1911;
 
-  return `你是一個專業的行政助理，專門從文字或圖片中提取行事曆相關資訊。
+  return `你是一個專業的行政助理，專門從公文、通知、文字或圖片中提取行事曆相關資訊。
+
+**重要：日期格式轉換**
+- 民國年轉換：民國 ${rocYear} 年 = 西元 ${new Date().getFullYear()} 年
+- 例如：114年2月6日 → 2025-02-06
+- 例如：114/02/06 → 2025-02-06
+- 所有日期請轉換為西元 YYYY-MM-DD 格式
 
 請從以下內容中提取：
-1. 活動/任務名稱
-2. 日期（請轉換為 YYYY-MM-DD 格式）
-3. 時間（如有，請轉換為 HH:MM 格式）
+1. 活動/任務名稱（精簡主旨，30字內）
+2. 日期（轉換為 YYYY-MM-DD 格式）
+3. 時間（如有，轉換為 HH:MM 格式）
 4. 結束時間（如有）
 5. 地點（如有）
-6. 重要截止日期（如報名截止日）
-7. 聯絡人資訊（如有）
+6. 重要截止日期（如報名截止日、繳交期限）
+7. 聯絡人資訊（承辦人、電話、信箱）
 8. 這是「活動」還是「任務」？
-   - 活動：有明確的舉辦時間，需要出席
-   - 任務：需要在某個期限前完成的事項
+   - 活動(event)：有明確的舉辦時間，需要出席（如會議、研習、活動）
+   - 任務(task)：需要在某個期限前完成的事項（如繳交資料、報名、填報）
 
 請以 JSON 格式回覆，不要包含 markdown code block：
 {
-  "title": "活動/任務名稱",
+  "title": "精簡的活動/任務名稱",
   "type": "event",
   "startDate": "YYYY-MM-DD",
   "startTime": "HH:MM",
@@ -43,25 +68,27 @@ function getCalendarExtractionPrompt() {
   "endTime": "HH:MM",
   "location": "地點",
   "deadline": "YYYY-MM-DD",
-  "deadlineDescription": "截止事項說明",
+  "deadlineDescription": "截止事項說明（如：報名截止、資料繳交）",
   "contact": {
-    "name": "聯絡人",
+    "name": "承辦人姓名",
     "phone": "電話",
     "email": "信箱"
   },
   "priority": "中",
-  "summary": "50字以內的摘要",
+  "summary": "50字以內的摘要，說明這份公文要做什麼",
   "confidence": 0.8
 }
 
 注意事項：
 - type 只能是 "event" 或 "task"
-- priority 只能是 "高"、"中" 或 "低"
+- priority：有截止日期且較近的設為「高」，一般通知設為「中」，參考性質設為「低」
 - confidence 是 0.0 到 1.0 之間的數字，表示你對解析結果的信心程度
 - 如果無法確定某個欄位，請設為 null
 - 如果內容中沒有任何日期資訊，請將 confidence 設為 0
+- 公文中的「說明」段落通常包含重要日期和要求
+- 「辦法」或「注意事項」段落通常包含報名/繳交方式
 
-今天日期：${today}`;
+今天日期：${today}（民國 ${rocYear} 年）`;
 }
 
 /**
