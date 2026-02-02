@@ -53,10 +53,9 @@ async function sendDailyReport(type) {
       return;
     }
 
-    // 計算今天日期（用於判斷逾期）
-    const today = new Date();
-    const todayStr = formatDate(today);
-    const weekday = getWeekday(today);
+    // 計算今天日期（使用台北時區）
+    const todayStr = getTaipeiDate();
+    const weekday = getTaipeiWeekday();
 
     // 查詢資料（7天內 + 逾期未完成）
     const [events, tasks, infoStats] = await Promise.all([
@@ -233,22 +232,39 @@ function buildReportEmbed(type, dateStr, weekday, events, tasks, infoStats) {
 }
 
 /**
- * 格式化日期
+ * 取得台北時區的今天日期
+ * @returns {string} YYYY-MM-DD
  */
-function formatDate(date) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
+function getTaipeiDate() {
+  const options = {
+    timeZone: 'Asia/Taipei',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  };
+  const formatter = new Intl.DateTimeFormat('zh-TW', options);
+  const parts = formatter.formatToParts(new Date());
+  const year = parts.find(p => p.type === 'year').value;
+  const month = parts.find(p => p.type === 'month').value;
+  const day = parts.find(p => p.type === 'day').value;
   return `${year}-${month}-${day}`;
 }
 
 /**
- * 取得星期幾
+ * 取得台北時區的星期幾
+ * @returns {string} 日/一/二/三/四/五/六
  */
-function getWeekday(date) {
-  const weekdays = ['日', '一', '二', '三', '四', '五', '六'];
-  return weekdays[date.getDay()];
+function getTaipeiWeekday() {
+  const options = {
+    timeZone: 'Asia/Taipei',
+    weekday: 'short'
+  };
+  const formatter = new Intl.DateTimeFormat('zh-TW', options);
+  const weekdayStr = formatter.format(new Date());
+  // 回傳格式可能是 "週日"，取最後一個字
+  return weekdayStr.replace('週', '');
 }
+
 
 /**
  * 手動觸發報告（測試用）
