@@ -494,6 +494,15 @@ notion.databases.query is not a function
 @cyclonetw
 ```
 
+### 優化：打卡模板獨立訊息
+
+**問題**：模板嵌在 Embed 內，複製時會連同整個通知一起複製
+
+**修正**：
+1. 模板改為獨立的純文字訊息發送
+2. Embed 內只顯示「打卡模板在下方訊息，可直接複製」
+3. 日期使用台北時區（`Intl.DateTimeFormat` + `Asia/Taipei`）
+
 ---
 
 ## 待辦事項
@@ -512,7 +521,7 @@ notion.databases.query is not a function
 - [x] 修復 Notion SDK 版本錯誤
 - [x] 公文 PDF 解析（支援民國年、直接送 Gemini）
 - [x] 每日通知加入 Notion 連結
-- [x] 每日打卡模板
+- [x] 每日打卡模板（獨立訊息、台北時區）
 
 ---
 
