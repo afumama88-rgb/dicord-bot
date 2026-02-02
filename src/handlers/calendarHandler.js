@@ -38,7 +38,17 @@ export async function handleCalendar(message) {
     // 根據內容類型提取行事曆資訊
     const calendarData = await extractCalendarData(message, contentType);
 
-    if (!calendarData || !calendarData.title || !calendarData.startDate) {
+    if (!calendarData || !calendarData.title) {
+      throw new Error('無法從內容中提取有效的標題');
+    }
+
+    // 如果沒有 startDate 但有 deadline，使用 deadline 作為日期
+    if (!calendarData.startDate && calendarData.deadline) {
+      calendarData.startDate = calendarData.deadline;
+      logger.info('使用 deadline 作為 startDate', { deadline: calendarData.deadline });
+    }
+
+    if (!calendarData.startDate) {
       throw new Error('無法從內容中提取有效的日期資訊');
     }
 

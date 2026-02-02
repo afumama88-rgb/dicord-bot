@@ -142,16 +142,44 @@ export async function extractCalendarFromImage(imageBuffer, mimeType) {
  * @returns {Promise<Object>} 解析結果
  */
 export async function extractCalendarFromPdf(pdfBuffer) {
-  // 先用 pdf-parse 提取文字
-  const pdfData = await pdf(pdfBuffer);
-  const text = pdfData.text;
+  const base64Pdf = pdfBuffer.toString('base64');
+  const prompt = getCalendarExtractionPrompt();
 
-  if (!text || text.trim().length === 0) {
-    throw new Error('PDF 中沒有可讀取的文字');
+  console.log(`[Gemini] 直接分析 PDF，大小: ${Math.round(pdfBuffer.length / 1024)} KB`);
+
+  try {
+    // 直接把 PDF 送給 Gemini 分析（Gemini 支援 PDF）
+    const response = await ai.models.generateContent({
+      model: MODEL,
+      contents: [
+        { text: prompt },
+        {
+          inlineData: {
+            mimeType: 'application/pdf',
+            data: base64Pdf
+          }
+        }
+      ]
+    });
+
+    console.log(`[Gemini] PDF 分析完成`);
+    return parseGeminiResponse(response.text);
+
+  } catch (error) {
+    console.error(`[Gemini] PDF 直接分析失敗: ${error.message}`);
+
+    // Fallback: 如果直接分析失敗，嘗試用 pdf-parse 提取文字
+    console.log(`[Gemini] 嘗試用 pdf-parse 提取文字...`);
+    const pdfData = await pdf(pdfBuffer);
+    const text = pdfData.text;
+
+    if (!text || text.trim().length === 0) {
+      throw new Error('PDF 中沒有可讀取的文字');
+    }
+
+    console.log(`[Gemini] 提取到 ${text.length} 字元，送交分析`);
+    return await extractCalendarFromText(text);
   }
-
-  // 用文字提取函數處理
-  return await extractCalendarFromText(text);
 }
 
 /**
@@ -195,6 +223,7 @@ function parseGeminiResponse(responseText) {
     const parsed = JSON.parse(jsonStr);
 
     // 確保必要欄位存在
+    const summary = parsed.summary || null;
     return {
       title: parsed.title || '未知標題',
       type: parsed.type === 'task' ? 'task' : 'event',
@@ -207,7 +236,8 @@ function parseGeminiResponse(responseText) {
       deadlineDescription: parsed.deadlineDescription || null,
       contact: parsed.contact || { name: null, phone: null, email: null },
       priority: ['高', '中', '低'].includes(parsed.priority) ? parsed.priority : '中',
-      summary: parsed.summary || null,
+      summary: summary,
+      description: summary,  // 別名，供 buttonHandler 使用
       confidence: typeof parsed.confidence === 'number' ? parsed.confidence : 0.5
     };
   } catch (error) {
