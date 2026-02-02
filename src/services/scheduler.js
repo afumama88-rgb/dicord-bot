@@ -84,7 +84,7 @@ async function sendDailyReport(type) {
     await channel.send(messageOptions);
 
     // 發送獨立的打卡模板訊息（方便複製）
-    const checkinTemplate = `${todayStr}\n:todo:\n:todo:\n:todo:\n@cyclonetw.`;
+    const checkinTemplate = `\`\`\`\n${todayStr}\n:todo:\n:todo:\n:todo:\n@cyclonetw.\n\`\`\``;
     await channel.send(checkinTemplate);
 
     logger.info('每日報告已發送', { type, date: todayStr });
