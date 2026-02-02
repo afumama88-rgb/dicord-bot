@@ -83,6 +83,10 @@ async function sendDailyReport(type) {
 
     await channel.send(messageOptions);
 
+    // 發送獨立的打卡模板訊息（方便複製）
+    const checkinTemplate = `${todayStr}\n:todo:\n:todo:\n:todo:\n@cyclonetw`;
+    await channel.send(checkinTemplate);
+
     logger.info('每日報告已發送', { type, date: todayStr });
 
   } catch (error) {
@@ -216,13 +220,8 @@ function buildReportEmbed(type, dateStr, weekday, events, tasks, infoStats) {
   }
   embed.addFields({ name: '📚 資訊收集', value: infoText });
 
-  // 打卡提醒
-  const checkinTemplate = `${dateStr}
-:todo:
-:todo:
-:todo:
-@cyclonetw`;
-  const checkinText = `👉 [點我前往打卡](https://discord.com/channels/876831894900199474/1181522618717851710)\n\n**複製模板：**\n\`\`\`\n${checkinTemplate}\n\`\`\``;
+  // 打卡提醒（模板會獨立發送）
+  const checkinText = '👉 [點我前往打卡](https://discord.com/channels/876831894900199474/1181522618717851710)\n📋 打卡模板在下方訊息，可直接複製';
   embed.addFields({ name: '🔔 每日打卡', value: checkinText });
 
   // Footer
