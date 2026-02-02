@@ -510,6 +510,9 @@ notion.databases.query is not a function
 - [x] 每日通知標記用戶
 - [x] Slash 指令功能
 - [x] 修復 Notion SDK 版本錯誤
+- [x] 公文 PDF 解析（支援民國年、直接送 Gemini）
+- [x] 每日通知加入 Notion 連結
+- [x] 每日打卡模板
 
 ---
 
@@ -525,3 +528,5 @@ notion.databases.query is not a function
 8. **第三方 API 欄位名稱不統一**：Apify 不同 Actor 回傳的欄位名稱可能不同，需要逐一測試
 9. **AI 給的版本號要驗證**：Claude 給了不存在的 `@notionhq/client@5.7.0`，實際最新是 `2.x`。永遠要到 npm 確認版本是否存在
 10. **伺服器時區問題**：Zeabur/Railway 等平台預設 UTC，日期計算要明確指定時區
+11. **PDF 直接送 AI 更可靠**：`pdf-parse` 提取文字可能不完整，Gemini 支援直接讀取 PDF（作為 inlineData），效果更好
+12. **欄位名稱要統一**：前後端、不同模組之間的欄位名稱要一致（如 `summary` vs `description`），否則資料會遺失
