@@ -502,6 +502,18 @@ notion.databases.query is not a function
 1. 模板改為獨立的純文字訊息發送
 2. Embed 內只顯示「打卡模板在下方訊息，可直接複製」
 3. 日期使用台北時區（`Intl.DateTimeFormat` + `Asia/Taipei`）
+4. 模板使用 code block（` ``` `）包裹，更直覺易複製
+
+**最終格式**：
+```
+\`\`\`
+2026-02-02
+:todo:
+:todo:
+:todo:
+@cyclonetw.
+\`\`\`
+```
 
 ---
 
