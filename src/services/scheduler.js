@@ -23,19 +23,19 @@ export function initScheduler(client) {
     return;
   }
 
-  // 每天 21:00 - 明日預覽
-  cron.schedule('0 21 * * *', () => {
+  // 每天 22:00 - 明日預覽
+  cron.schedule('0 22 * * *', () => {
     sendDailyReport('preview');
   }, { timezone: 'Asia/Taipei' });
 
-  // 每天 08:00 - 當日提醒
-  cron.schedule('0 8 * * *', () => {
+  // 每天 06:00 - 當日提醒
+  cron.schedule('0 6 * * *', () => {
     sendDailyReport('reminder');
   }, { timezone: 'Asia/Taipei' });
 
   logger.info('每日通知排程已啟動', {
-    preview: '21:00',
-    reminder: '08:00',
+    preview: '22:00',
+    reminder: '06:00',
     timezone: 'Asia/Taipei'
   });
 }
