@@ -36,10 +36,11 @@ Discord 自動化機器人，整合 Notion、Google Calendar、Gemini AI。
 
 | 指令 | 功能 |
 |------|------|
+| `/ai` | AI 智慧解析 - 輸入文字自動判斷活動或任務 |
 | `/notify` | 立即發送每日通知 |
 | `/status` | 查看機器人狀態與設定 |
-| `/add-event` | 新增活動到 Notion |
-| `/add-task` | 新增任務到 Notion |
+| `/add-event` | 手動新增活動到 Notion |
+| `/add-task` | 手動新增任務到 Notion |
 | `/today` | 查看今日行程與任務 |
 
 ## 技術架構

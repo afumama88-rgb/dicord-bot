@@ -147,12 +147,6 @@ export async function createTaskPage(data) {
     Name: {
       title: [{ text: { content: data.title } }]
     },
-    '日期': {
-      date: {
-        start: data.startDate,
-        end: data.endDate || undefined
-      }
-    },
     '類型': {
       select: { name: data.type === 'event' ? '活動' : '任務' }
     },
@@ -163,6 +157,16 @@ export async function createTaskPage(data) {
       select: { name: '待處理' }
     }
   };
+
+  // 只有當日期存在時才加入日期屬性（Notion 不接受 null）
+  if (data.startDate) {
+    properties['日期'] = {
+      date: {
+        start: data.startDate,
+        end: data.endDate || undefined
+      }
+    };
+  }
 
   const response = await notion.pages.create({
     parent: { database_id: CALENDAR_DATABASE_ID },

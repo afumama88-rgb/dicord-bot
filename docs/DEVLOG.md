@@ -526,6 +526,95 @@ notion.databases.query is not a function
 
 ---
 
+## 2026-02-04：/add-task 指令修復
+
+### 問題
+
+使用 `/add-task` 指令時出現錯誤：
+```
+❌ 新增失敗：body failed validation: body.properties.日期.date.start should be a string, instead was null
+```
+
+### 原因
+
+當使用者使用 `/add-task` 新增任務但有提供 deadline 時，程式碼邏輯正確傳遞日期。但 `createTaskPage` 函數的日期屬性總是被包含在 properties 物件中，即使值為 `null`：
+
+```javascript
+// 原本的程式碼
+'日期': {
+  date: {
+    start: data.startDate,  // 可能是 null
+    end: data.endDate || undefined
+  }
+}
+```
+
+Notion API 不接受 `null` 作為日期值，必須是有效的日期字串或完全省略該屬性。
+
+### 修正
+
+在 `src/services/notion.js` 的 `createTaskPage` 函數中，只有當 `startDate` 存在時才加入日期屬性：
+
+```javascript
+// 只有當日期存在時才加入日期屬性（Notion 不接受 null）
+if (data.startDate) {
+  properties['日期'] = {
+    date: {
+      start: data.startDate,
+      end: data.endDate || undefined
+    }
+  };
+}
+```
+
+> **教訓**：Notion API 對於可選欄位，應該完全省略而非傳入 `null`。在建構 properties 物件時要先檢查值是否存在。
+
+---
+
+## 2026-02-04：新增 /ai 智慧解析指令
+
+### 需求
+
+使用者希望有一個更直覺的方式新增活動/任務，不需要手動選擇類型和填寫各欄位，只要輸入一段文字描述，讓 AI 自動判斷。
+
+### 實作
+
+新增 `/ai` Slash 指令：
+
+```
+/ai 明天下午兩點開會要帶筆電
+/ai 禮拜五前要交報告
+/ai 2/14 情人節晚餐 信義區餐廳
+```
+
+**流程**：
+1. 使用者輸入文字描述
+2. 呼叫 Gemini AI 分析（使用現有的 `extractCalendarFromText`）
+3. AI 自動判斷：
+   - 類型：活動 (event) 或 任務 (task)
+   - 日期、時間、地點
+   - 優先級
+   - 摘要
+4. 顯示預覽，包含 AI 信心指數
+5. 使用者選擇：Google 日曆 / Google 任務 / 僅存 Notion / 取消
+6. 確認後建立
+
+**與現有指令的差別**：
+
+| 指令 | 用途 | 特點 |
+|------|------|------|
+| `/add-event` | 手動新增活動 | 需填寫各欄位 |
+| `/add-task` | 手動新增任務 | 需填寫各欄位 |
+| `/ai` | AI 智慧解析 | 輸入文字，自動判斷 |
+
+**優點**：
+- 只需 2 個字的指令名稱，打字最快
+- 不需要選擇類型，AI 自動判斷
+- 不需要分別填寫日期、時間、地點，AI 自動提取
+- 顯示 AI 信心指數，讓使用者知道解析可靠度
+
+---
+
 ## 待辦事項
 
 - [ ] AI 對話頻道功能
@@ -543,6 +632,8 @@ notion.databases.query is not a function
 - [x] 公文 PDF 解析（支援民國年、直接送 Gemini）
 - [x] 每日通知加入 Notion 連結
 - [x] 每日打卡模板（獨立訊息、台北時區）
+- [x] 修復 /add-task 日期欄位 null 值錯誤
+- [x] 新增 /ai 智慧解析指令
 
 ---
 
@@ -560,3 +651,4 @@ notion.databases.query is not a function
 10. **伺服器時區問題**：Zeabur/Railway 等平台預設 UTC，日期計算要明確指定時區
 11. **PDF 直接送 AI 更可靠**：`pdf-parse` 提取文字可能不完整，Gemini 支援直接讀取 PDF（作為 inlineData），效果更好
 12. **欄位名稱要統一**：前後端、不同模組之間的欄位名稱要一致（如 `summary` vs `description`），否則資料會遺失
+13. **Notion API 不接受 null**：可選欄位若無值應完全省略，而非傳入 `null`。建構 properties 時要先檢查值是否存在再加入物件

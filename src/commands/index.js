@@ -12,6 +12,7 @@ import statusCommand from './status.js';
 import addEventCommand from './addEvent.js';
 import addTaskCommand from './addTask.js';
 import todayCommand from './today.js';
+import aiCommand from './ai.js';
 
 // 指令集合
 const commands = new Collection();
@@ -22,7 +23,8 @@ const commandList = [
   statusCommand,
   addEventCommand,
   addTaskCommand,
-  todayCommand
+  todayCommand,
+  aiCommand
 ];
 
 commandList.forEach(cmd => {
