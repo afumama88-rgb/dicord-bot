@@ -57,6 +57,9 @@ function getCalendarExtractionPrompt() {
 8. 這是「活動」還是「任務」？
    - 活動(event)：有明確的舉辦時間，需要出席（如會議、研習、活動）
    - 任務(task)：需要在某個期限前完成的事項（如繳交資料、報名、填報）
+9. 提醒設定（如有提到「提醒我」、「通知我」、「X小時/分鐘前」等）
+   - 提取提前多少分鐘提醒
+   - 常見格式：「2小時前提醒」→ 120分鐘、「30分鐘前通知」→ 30分鐘、「前一天提醒」→ 1440分鐘
 
 請以 JSON 格式回覆，不要包含 markdown code block：
 {
@@ -76,7 +79,12 @@ function getCalendarExtractionPrompt() {
   },
   "priority": "中",
   "summary": "50字以內的摘要，說明這份公文要做什麼",
-  "confidence": 0.8
+  "confidence": 0.8,
+  "reminder": {
+    "enabled": true,
+    "beforeMinutes": 120,
+    "description": "2小時前"
+  }
 }
 
 注意事項：
@@ -87,6 +95,9 @@ function getCalendarExtractionPrompt() {
 - 如果內容中沒有任何日期資訊，請將 confidence 設為 0
 - 公文中的「說明」段落通常包含重要日期和要求
 - 「辦法」或「注意事項」段落通常包含報名/繳交方式
+- reminder.enabled：如果使用者有提到要提醒，設為 true；沒提到設為 false
+- reminder.beforeMinutes：提前幾分鐘提醒（1小時=60, 2小時=120, 1天=1440）
+- reminder.description：原始的提醒描述（如「2小時前」）
 
 今天日期：${today}（民國 ${rocYear} 年）`;
 }
@@ -224,6 +235,10 @@ function parseGeminiResponse(responseText) {
 
     // 確保必要欄位存在
     const summary = parsed.summary || null;
+
+    // 處理提醒設定
+    const reminder = parsed.reminder || { enabled: false, beforeMinutes: null, description: null };
+
     return {
       title: parsed.title || '未知標題',
       type: parsed.type === 'task' ? 'task' : 'event',
@@ -238,7 +253,12 @@ function parseGeminiResponse(responseText) {
       priority: ['高', '中', '低'].includes(parsed.priority) ? parsed.priority : '中',
       summary: summary,
       description: summary,  // 別名，供 buttonHandler 使用
-      confidence: typeof parsed.confidence === 'number' ? parsed.confidence : 0.5
+      confidence: typeof parsed.confidence === 'number' ? parsed.confidence : 0.5,
+      reminder: {
+        enabled: reminder.enabled === true,
+        beforeMinutes: typeof reminder.beforeMinutes === 'number' ? reminder.beforeMinutes : null,
+        description: reminder.description || null
+      }
     };
   } catch (error) {
     console.error('Gemini 回應解析失敗:', responseText);

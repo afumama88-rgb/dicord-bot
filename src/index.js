@@ -8,6 +8,7 @@ import express from 'express';
 import { config } from './config/index.js';
 import { handleReady, handleMessageCreate, handleInteractionCreate } from './events/index.js';
 import { initScheduler } from './services/scheduler.js';
+import { initReminderScheduler } from './services/reminderScheduler.js';
 import * as logger from './utils/logger.js';
 
 // 建立 Discord Client
@@ -29,6 +30,7 @@ const client = new Client({
 client.once('ready', async () => {
   await handleReady(client);
   initScheduler(client);
+  initReminderScheduler(client);
 });
 client.on('messageCreate', handleMessageCreate);
 client.on('interactionCreate', handleInteractionCreate);

@@ -160,12 +160,37 @@ export async function createTaskPage(data) {
 
   // 只有當日期存在時才加入日期屬性（Notion 不接受 null）
   if (data.startDate) {
+    // 組合日期時間
+    let startDateTime = data.startDate;
+    if (data.startTime) {
+      startDateTime = `${data.startDate}T${data.startTime}:00+08:00`;
+    }
+
+    let endDateTime = data.endDate || undefined;
+    if (data.endDate && data.endTime) {
+      endDateTime = `${data.endDate}T${data.endTime}:00+08:00`;
+    }
+
     properties['日期'] = {
       date: {
-        start: data.startDate,
-        end: data.endDate || undefined
+        start: startDateTime,
+        end: endDateTime
       }
     };
+  }
+
+  // 提醒時間（如果有設定提醒）
+  if (data.reminder && data.reminder.enabled && data.reminder.beforeMinutes && data.startDate) {
+    const reminderTime = calculateReminderTime(data.startDate, data.startTime, data.reminder.beforeMinutes);
+    if (reminderTime) {
+      properties['提醒時間'] = {
+        date: { start: reminderTime }
+      };
+      // 已提醒預設為 false
+      properties['已提醒'] = {
+        checkbox: false
+      };
+    }
   }
 
   const response = await notion.pages.create({
@@ -379,9 +404,55 @@ function buildTaskPageContent(data) {
   return blocks;
 }
 
+/**
+ * 計算提醒時間
+ * @param {string} startDate - 開始日期 YYYY-MM-DD
+ * @param {string} startTime - 開始時間 HH:MM（可選）
+ * @param {number} beforeMinutes - 提前幾分鐘
+ * @returns {string|null} ISO 格式的提醒時間
+ */
+function calculateReminderTime(startDate, startTime, beforeMinutes) {
+  try {
+    // 組合日期時間
+    let dateTimeStr = startDate;
+    if (startTime) {
+      dateTimeStr = `${startDate}T${startTime}:00`;
+    } else {
+      // 如果沒有時間，預設為當天 09:00
+      dateTimeStr = `${startDate}T09:00:00`;
+    }
+
+    // 建立台北時區的日期物件
+    const eventTime = new Date(dateTimeStr + '+08:00');
+
+    // 減去提前分鐘數
+    const reminderTime = new Date(eventTime.getTime() - beforeMinutes * 60 * 1000);
+
+    // 格式化為 ISO 格式（帶時區）
+    return reminderTime.toISOString();
+  } catch (error) {
+    console.error('計算提醒時間失敗:', error);
+    return null;
+  }
+}
+
+/**
+ * 標記提醒已發送
+ * @param {string} pageId - Notion 頁面 ID
+ */
+export async function markReminderSent(pageId) {
+  return await notion.pages.update({
+    page_id: pageId,
+    properties: {
+      '已提醒': { checkbox: true }
+    }
+  });
+}
+
 export default {
   createInfoPage,
   createTaskPage,
   updatePage,
-  archivePage
+  archivePage,
+  markReminderSent
 };

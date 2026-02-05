@@ -127,6 +127,12 @@ function createAiPreviewEmbed(data, originalText) {
     embed.addFields({ name: '⏰ 截止日期', value: data.deadline, inline: true });
   }
 
+  // 提醒設定
+  if (data.reminder && data.reminder.enabled) {
+    const reminderText = data.reminder.description || `${data.reminder.beforeMinutes} 分鐘前`;
+    embed.addFields({ name: '🔔 提醒', value: reminderText, inline: true });
+  }
+
   // 摘要
   if (data.summary) {
     embed.addFields({ name: '📝 摘要', value: data.summary, inline: false });

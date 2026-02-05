@@ -104,7 +104,8 @@ async function handleCreateCalendarEvent(interaction, data, messageId) {
     endTime: data.endTime,
     location: data.location,
     type: 'event',
-    googleLink: calendarResult?.htmlLink
+    googleLink: calendarResult?.htmlLink,
+    reminder: data.reminder
   });
 
   // 清除快取
@@ -152,7 +153,8 @@ async function handleCreateTask(interaction, data, messageId) {
     summary: data.description,
     startDate: data.startDate,
     endDate: data.endDate,
-    type: 'task'
+    type: 'task',
+    reminder: data.reminder
   });
 
   // 清除快取
@@ -186,7 +188,8 @@ async function handleNotionOnly(interaction, data, messageId) {
     startTime: data.startTime,
     endTime: data.endTime,
     location: data.location,
-    type: 'note'
+    type: 'note',
+    reminder: data.reminder
   });
 
   // 清除快取
