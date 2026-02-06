@@ -129,7 +129,12 @@ function createAiPreviewEmbed(data, originalText) {
 
   // 提醒設定
   if (data.reminder && data.reminder.enabled) {
-    const reminderText = data.reminder.description || `${data.reminder.beforeMinutes} 分鐘前`;
+    let reminderText = data.reminder.description || '';
+    if (data.reminder.mode === 'exact' && data.reminder.exactTime) {
+      reminderText = `在 ${data.reminder.exactTime} 提醒`;
+    } else if (data.reminder.mode === 'before' && data.reminder.beforeMinutes) {
+      reminderText = `提前 ${data.reminder.beforeMinutes} 分鐘`;
+    }
     embed.addFields({ name: '🔔 提醒', value: reminderText, inline: true });
   }
 

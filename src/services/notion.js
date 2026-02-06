@@ -180,8 +180,17 @@ export async function createTaskPage(data) {
   }
 
   // 提醒時間（如果有設定提醒）
-  if (data.reminder && data.reminder.enabled && data.reminder.beforeMinutes && data.startDate) {
-    const reminderTime = calculateReminderTime(data.startDate, data.startTime, data.reminder.beforeMinutes);
+  if (data.reminder && data.reminder.enabled) {
+    let reminderTime = null;
+
+    if (data.reminder.mode === 'exact' && data.reminder.exactTime) {
+      // 模式A：明確時間點（例：「提醒我明天下午4點買東西」）
+      reminderTime = parseExactTime(data.reminder.exactTime);
+    } else if (data.reminder.mode === 'before' && data.reminder.beforeMinutes && data.startDate) {
+      // 模式B：提前通知（例：「明天4點開會，2小時前提醒」）
+      reminderTime = calculateReminderTime(data.startDate, data.startTime, data.reminder.beforeMinutes);
+    }
+
     if (reminderTime) {
       properties['提醒時間'] = {
         date: { start: reminderTime }
@@ -402,6 +411,44 @@ function buildTaskPageContent(data) {
   });
 
   return blocks;
+}
+
+/**
+ * 解析明確的提醒時間
+ * @param {string} exactTime - 明確時間 YYYY-MM-DD HH:MM
+ * @returns {string|null} ISO 格式的提醒時間
+ */
+function parseExactTime(exactTime) {
+  try {
+    if (!exactTime) return null;
+
+    // 支援多種格式
+    let dateTimeStr = exactTime;
+
+    // 如果只有日期沒有時間，預設 09:00
+    if (/^\d{4}-\d{2}-\d{2}$/.test(exactTime)) {
+      dateTimeStr = `${exactTime}T09:00:00`;
+    } else if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/.test(exactTime)) {
+      // 格式：YYYY-MM-DD HH:MM
+      dateTimeStr = exactTime.replace(' ', 'T') + ':00';
+    } else if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(exactTime)) {
+      // 格式：YYYY-MM-DDTHH:MM
+      dateTimeStr = exactTime + ':00';
+    }
+
+    // 建立台北時區的日期物件
+    const reminderTime = new Date(dateTimeStr + '+08:00');
+
+    if (isNaN(reminderTime.getTime())) {
+      console.error('無效的提醒時間格式:', exactTime);
+      return null;
+    }
+
+    return reminderTime.toISOString();
+  } catch (error) {
+    console.error('解析提醒時間失敗:', error);
+    return null;
+  }
 }
 
 /**

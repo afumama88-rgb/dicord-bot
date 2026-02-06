@@ -57,9 +57,10 @@ function getCalendarExtractionPrompt() {
 8. 這是「活動」還是「任務」？
    - 活動(event)：有明確的舉辦時間，需要出席（如會議、研習、活動）
    - 任務(task)：需要在某個期限前完成的事項（如繳交資料、報名、填報）
-9. 提醒設定（如有提到「提醒我」、「通知我」、「X小時/分鐘前」等）
-   - 提取提前多少分鐘提醒
-   - 常見格式：「2小時前提醒」→ 120分鐘、「30分鐘前通知」→ 30分鐘、「前一天提醒」→ 1440分鐘
+9. 提醒設定（如有提到「提醒我」、「通知我」等）
+   - **情境A - 明確時間點**：「提醒我明天下午4點買東西」→ 提醒時間就是明天下午4點
+   - **情境B - 提前通知**：「明天4點開會，2小時前提醒」→ 提醒時間 = 事件時間 - 2小時
+   - 判斷邏輯：如果句子是「提醒我+時間+做某事」，用情境A；如果是「某事+時間前提醒」，用情境B
 
 請以 JSON 格式回覆，不要包含 markdown code block：
 {
@@ -82,10 +83,19 @@ function getCalendarExtractionPrompt() {
   "confidence": 0.8,
   "reminder": {
     "enabled": true,
-    "beforeMinutes": 120,
-    "description": "2小時前"
+    "mode": "exact",
+    "exactTime": "YYYY-MM-DD HH:MM",
+    "beforeMinutes": null,
+    "description": "明天下午4點"
   }
 }
+
+reminder 欄位說明：
+- enabled：如果使用者有提到要提醒，設為 true
+- mode：「exact」表示明確時間點，「before」表示提前通知
+- exactTime：當 mode=exact 時，填入要提醒的時間（YYYY-MM-DD HH:MM）
+- beforeMinutes：當 mode=before 時，填入提前幾分鐘（1小時=60, 2小時=120, 1天=1440）
+- description：原始的提醒描述
 
 注意事項：
 - type 只能是 "event" 或 "task"
@@ -237,7 +247,7 @@ function parseGeminiResponse(responseText) {
     const summary = parsed.summary || null;
 
     // 處理提醒設定
-    const reminder = parsed.reminder || { enabled: false, beforeMinutes: null, description: null };
+    const reminder = parsed.reminder || { enabled: false };
 
     return {
       title: parsed.title || '未知標題',
@@ -256,6 +266,8 @@ function parseGeminiResponse(responseText) {
       confidence: typeof parsed.confidence === 'number' ? parsed.confidence : 0.5,
       reminder: {
         enabled: reminder.enabled === true,
+        mode: reminder.mode === 'exact' ? 'exact' : 'before',
+        exactTime: reminder.exactTime || null,
         beforeMinutes: typeof reminder.beforeMinutes === 'number' ? reminder.beforeMinutes : null,
         description: reminder.description || null
       }
