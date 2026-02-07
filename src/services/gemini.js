@@ -290,7 +290,21 @@ function parseGeminiResponse(responseText) {
  * @returns {Promise<string>} 標題（20字內）
  */
 export async function generatePostTitle(content, platform = '') {
-  if (!content || content.trim().length === 0) {
+  // 確保 content 是字串
+  if (!content) {
+    return null;
+  }
+
+  // 如果不是字串，嘗試轉換
+  if (typeof content !== 'string') {
+    if (typeof content === 'object') {
+      content = JSON.stringify(content);
+    } else {
+      content = String(content);
+    }
+  }
+
+  if (content.trim().length === 0) {
     return null;
   }
 

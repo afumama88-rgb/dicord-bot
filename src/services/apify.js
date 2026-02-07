@@ -200,20 +200,33 @@ async function normalizePostData(post, url, platform) {
   let text = '';
   let thumbnail = null;
 
+  // 輔助函數：確保取得字串值
+  const getString = (...values) => {
+    for (const val of values) {
+      if (typeof val === 'string' && val.trim()) {
+        return val;
+      }
+      if (val && typeof val === 'object' && val.text) {
+        return String(val.text);
+      }
+    }
+    return '';
+  };
+
   // 根據不同平台提取欄位（對照 Line Bot 邏輯）
   if (platform === 'facebook') {
     // Facebook 作者欄位優先級
-    author = post.pageName || post.userName || post.name || post.user || post.groupTitle || '未知';
+    author = getString(post.pageName, post.userName, post.name, post.user, post.groupTitle) || '未知';
     // Facebook 內容欄位優先級
-    text = post.text || post.message || post.postText || post.description ||
-           post.story || post.content || post.seo_title || '';
+    text = getString(post.text, post.message, post.postText, post.description,
+           post.story, post.content, post.seo_title);
     thumbnail = post.imageUrl || post.thumbnailUrl || post.image || post.photoUrl || null;
 
   } else if (platform === 'instagram') {
     // Instagram 支援嵌套 owner 物件
     const ownerInfo = (typeof post.owner === 'object' && post.owner) ? post.owner : {};
-    author = post.ownerUsername || post.username || ownerInfo.username ||
-             post.ownerFullName || ownerInfo.fullName || '';
+    author = getString(post.ownerUsername, post.username, ownerInfo.username,
+             post.ownerFullName, ownerInfo.fullName);
     // 如果還是沒有，嘗試從 URL 提取
     if (!author) {
       const igMatch = url.match(/instagram\.com\/([^/]+)/);
@@ -223,7 +236,7 @@ async function normalizePostData(post, url, platform) {
     }
     if (!author) author = '未知';
     // Instagram 內容
-    text = post.caption || post.text || post.description || '';
+    text = getString(post.caption, post.text, post.description);
     thumbnail = post.displayUrl || post.thumbnailUrl || post.imageUrl || null;
 
   } else if (platform === 'threads') {
@@ -232,10 +245,10 @@ async function normalizePostData(post, url, platform) {
     if (thMatch) {
       author = thMatch[2];
     } else {
-      author = post.ownerUsername || post.username || post.author || post.user || '未知';
+      author = getString(post.ownerUsername, post.username, post.author, post.user) || '未知';
     }
     // Threads 內容
-    text = post.text || post.caption || post.content || post.postText || '';
+    text = getString(post.text, post.caption, post.content, post.postText);
     thumbnail = post.imageUrl || post.thumbnailUrl || post.displayUrl || null;
   }
 
