@@ -53,9 +53,11 @@ async function sendDailyReport(type) {
       return;
     }
 
-    // 計算今天日期（使用台北時區）
-    const todayStr = getTaipeiDate();
-    const weekday = getTaipeiWeekday();
+    // 計算日期（使用台北時區）
+    // preview (22:00) 用隔天日期，reminder (06:00) 用當天日期
+    const isPreview = type === 'preview';
+    const todayStr = isPreview ? getTaipeiTomorrowDate() : getTaipeiDate();
+    const weekday = isPreview ? getTaipeiTomorrowWeekday() : getTaipeiWeekday();
 
     // 查詢資料（7天內 + 逾期未完成）
     const [events, tasks, infoStats] = await Promise.all([
@@ -84,7 +86,7 @@ async function sendDailyReport(type) {
     await channel.send(messageOptions);
 
     // 發送獨立的打卡模板訊息（方便複製）
-    const checkinTemplate = `\`\`\`\n${todayStr}\n:todo:\n:todo:\n:todo:\n@cyclonetw.\n\`\`\``;
+    const checkinTemplate = `:dragon~2: ${todayStr}:dragon~2:\n:todo:\n:todopush:\n:tododone:\n@cyclonetw.\nhttps://discord.com/channels/876831894900199474/1256941297755881484`;
     await channel.send(checkinTemplate);
 
     logger.info('每日報告已發送', { type, date: todayStr });
@@ -247,6 +249,43 @@ function getTaipeiDate() {
   const month = parts.find(p => p.type === 'month').value;
   const day = parts.find(p => p.type === 'day').value;
   return `${year}-${month}-${day}`;
+}
+
+/**
+ * 取得台北時區的明天日期
+ * @returns {string} YYYY-MM-DD
+ */
+function getTaipeiTomorrowDate() {
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const options = {
+    timeZone: 'Asia/Taipei',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  };
+  const formatter = new Intl.DateTimeFormat('zh-TW', options);
+  const parts = formatter.formatToParts(tomorrow);
+  const year = parts.find(p => p.type === 'year').value;
+  const month = parts.find(p => p.type === 'month').value;
+  const day = parts.find(p => p.type === 'day').value;
+  return `${year}-${month}-${day}`;
+}
+
+/**
+ * 取得台北時區的明天星期幾
+ * @returns {string} 日/一/二/三/四/五/六
+ */
+function getTaipeiTomorrowWeekday() {
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const options = {
+    timeZone: 'Asia/Taipei',
+    weekday: 'short'
+  };
+  const formatter = new Intl.DateTimeFormat('zh-TW', options);
+  const weekdayStr = formatter.format(tomorrow);
+  return weekdayStr.replace('週', '');
 }
 
 /**
