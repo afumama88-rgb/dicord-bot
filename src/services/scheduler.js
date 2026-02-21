@@ -86,7 +86,7 @@ async function sendDailyReport(type) {
     await channel.send(messageOptions);
 
     // 發送獨立的打卡模板訊息（方便複製）
-    const checkinTemplate = `:dragon~2: ${todayStr}:dragon~2:\n:todo:\n:todopush:\n:tododone:\n@cyclonetw.\nhttps://discord.com/channels/876831894900199474/1256941297755881484`;
+    const checkinTemplate = `${todayStr}\n:todo:\n:todopush:\n:tododone:\n@travellucy\nhttps://discord.com/channels/876831894900199474/1256941297755881484`;
     await channel.send(checkinTemplate);
 
     logger.info('每日報告已發送', { type, date: todayStr });
